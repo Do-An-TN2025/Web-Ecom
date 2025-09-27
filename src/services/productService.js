@@ -209,15 +209,3 @@ export const updateVariantImages = async (variantId, formData, action = "append"
     throw new Error(error.response?.data?.message || "Failed to update variant images");
   }
 };
-
-export const formatPrice = (price) => {
-  return new Intl.NumberFormat('vi-VN', {
-    style: 'currency',
-    currency: 'VND'
-  }).format(price);
-};
-
-export const calculateDiscount = (originalPrice, discountPrice) => {
-  if (!discountPrice || discountPrice >= originalPrice) return 0;
-  return Math.round((1 - discountPrice / originalPrice) * 100);
-};
