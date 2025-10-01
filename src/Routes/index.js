@@ -1,16 +1,26 @@
 import React from 'react';
-import { BrowserRouter as Router, Route, Routes } from 'react-router-dom';
+import { Routes, Route } from "react-router-dom";
 import Home from '../Pages/Home';
 import NotFound from '../Pages/NotFound';
+import CategoryPage from "../Pages/CategoryPage";
+import ProductDetail from '../Pages/ProductDetail';
+import Auth from '../Pages/Auth';
+import AdminDashboard from '../Pages/AdminDashboard';
+import AdminProducts from '../Pages/admin/AdminProduct';
+import AdminCategories from '../Pages/admin/AdminCategories/AdminCategories';
 
 const AppRoutes = () => {
   return (
-    <Router>
-      <Routes>
-        <Route path="/" element={<Home />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </Router>
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route path="/category/:slug" element={<CategoryPage />} />
+       <Route path="/product/:slug" element={<ProductDetail />} />
+      <Route path="/account/login" element={<Auth />} />
+      <Route path="/admin" element={<AdminDashboard />} />
+      <Route path="/admin/products" element={<AdminProducts />} />
+      <Route path="/admin/categories" element={<AdminCategories />} />
+      <Route path="*" element={<NotFound />} />
+    </Routes>
   );
 };
 
