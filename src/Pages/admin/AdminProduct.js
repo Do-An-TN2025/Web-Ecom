@@ -55,7 +55,7 @@ const AdminProduct = () => {
   return (
     <AdminLayout>
       <div style={{ padding: 16 }}>
-        <ProductHeader onSearch={handleSearch} onAdd={handleAddProduct} />
+       <ProductHeader onAddSuccess={fetchProducts} />
         <ProductTable
           products={products?.data || []}
           onView={handleView}

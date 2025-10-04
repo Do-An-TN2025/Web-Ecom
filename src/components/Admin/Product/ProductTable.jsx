@@ -30,10 +30,27 @@ import {
   TrendingDown,
 } from "@mui/icons-material";
 
+import VariantDialog from "./VariantDialog";
+
 const ProductTable = ({ products, onEdit, onDelete, onView }) => {
   const [searchText, setSearchText] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
-  const [anchorEl, setAnchorEl] = useState(null);
+
+
+  const [openVariantDialog, setOpenVariantDialog] = useState(false);
+  const [selectedProduct, setSelectedProduct] = useState(null);   
+  const handleOpenVariants = (product) => {
+    setSelectedProduct(product);
+    setOpenVariantDialog(true);
+  };
+
+  const handleCloseDialog = () => {
+    setOpenVariantDialog(false);
+    setSelectedProduct(null);
+  };
+
+
+
 
   if (!products || products.length === 0) {
     return (
@@ -434,6 +451,10 @@ const ProductTable = ({ products, onEdit, onDelete, onView }) => {
           disableRowSelectionOnClick
           rowHeight={90}
           checkboxSelection
+          onRowClick={(params) => {
+            setSelectedProduct(params.row.productData); 
+            setOpenVariantDialog(true);
+          }}
           sx={{
             border: "none",
             height: "100%",
@@ -464,7 +485,15 @@ const ProductTable = ({ products, onEdit, onDelete, onView }) => {
           }}
         />
       </Paper>
+       {selectedProduct && (
+        <VariantDialog
+          open={openVariantDialog}
+          onClose={handleCloseDialog}
+          product={selectedProduct}
+        />
+      )}
     </Box>
+    
   );
 };
 

@@ -3,7 +3,7 @@ import { Box, Typography, Button } from "@mui/material";
 import { Add } from "@mui/icons-material";
 import ProductDrawer from "./ProductDrawer";
 
-const ProductHeader = ({ onAddSuccess }) => {
+const ProductHeader = ({ onAddSuccess ,  }) => {
   const [openDrawer, setOpenDrawer] = useState(false);
 
   return (
@@ -31,7 +31,10 @@ const ProductHeader = ({ onAddSuccess }) => {
       <ProductDrawer
         open={openDrawer}
         onClose={() => setOpenDrawer(false)}
-        onSuccess={onAddSuccess}
+         onSuccess={() => {
+          setOpenDrawer(false);
+          onAddSuccess()
+        }}
       />
     </>
   );

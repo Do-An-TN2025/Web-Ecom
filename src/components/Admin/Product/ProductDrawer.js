@@ -11,19 +11,19 @@ import {
 import { getCategories } from "../../../services/categoryService";
 import axios from "axios";
 
-const ProductDrawer = ({ open, onClose, onSuccess }) => {
-  const [form, setForm] = useState({
-    name: "",
-    slug: "",
-    shortDescription: "",
-    brand: "",
-    tags: "",
-    categoryId: "",
-  });
+const defaultForm = {
+  name: "",
+  slug: "",
+  shortDescription: "",
+  brand: "",
+  tags: "",
+  categoryId: "",
+};
 
+const ProductDrawer = ({ open, onClose, onSuccess }) => {
+  const [form, setForm] = useState(defaultForm);
   const [categories, setCategories] = useState([]);
 
-  // load categories
   useEffect(() => {
     if (open) {
       getCategories().then((data) => setCategories(data));
@@ -34,14 +34,21 @@ const ProductDrawer = ({ open, onClose, onSuccess }) => {
     setForm({ ...form, [e.target.name]: e.target.value });
   };
 
+  const resetForm = () => {
+    setForm(defaultForm);
+  };
+
   const handleSubmit = async () => {
     try {
-      const token = localStorage.getItem("token"); // giả sử bạn lưu token ở đây
-      const res = await axios.post(
-        `${process.env.REACT_APP_API_URL}/products`,
+      const token = localStorage.getItem("token");
+
+      await axios.post(
+        `${process.env.REACT_APP_API_URL}/products/add-product/`,
         {
           ...form,
-          tags: form.tags.split(",").map((t) => t.trim()), // convert tags
+          tags: form.tags
+            ? form.tags.split(",").map((t) => t.trim())
+            : [],
         },
         {
           headers: {
@@ -50,11 +57,12 @@ const ProductDrawer = ({ open, onClose, onSuccess }) => {
         }
       );
 
-      onSuccess(res.data); // callback load lại list
+      resetForm();        // ✅ Clear form
+      if (onSuccess) onSuccess();
       onClose();
     } catch (err) {
-      console.error("Lỗi tạo sản phẩm:", err.response?.data || err.message);
-      alert("Không thể tạo sản phẩm!");
+      console.error("❌ Lỗi tạo sản phẩm:", err.response?.data || err.message);
+      alert(err.response?.data?.message || "Không thể tạo sản phẩm!");
     }
   };
 
@@ -120,8 +128,19 @@ const ProductDrawer = ({ open, onClose, onSuccess }) => {
           </TextField>
 
           <Stack direction="row" spacing={2} justifyContent="flex-end">
-            <Button onClick={onClose}>Hủy</Button>
-            <Button variant="contained" color="success" onClick={handleSubmit}>
+            <Button
+              onClick={() => {
+                resetForm(); 
+                onClose();
+              }}
+            >
+              Hủy
+            </Button>
+            <Button
+              variant="contained"
+              color="success"
+              onClick={handleSubmit}
+            >
               Lưu
             </Button>
           </Stack>
