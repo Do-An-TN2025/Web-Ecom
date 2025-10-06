@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { loginService, registerService } from "../services/AuthService";
+import {toast} from "react-toastify";
 
 export default function Auth() {
   const [loginData, setLoginData] = useState({ email: "", password: "" });
@@ -19,11 +20,11 @@ export default function Auth() {
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
-      alert("Đăng nhập thành công!");
+      toast.success("Đăng nhập thành công!");
       window.location.href = "/";
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Đăng nhập thất bại");
+      toast.error(error.response?.data?.message || "Đăng nhập thất bại");
     }
   };
   
@@ -35,11 +36,11 @@ export default function Auth() {
       localStorage.setItem("token", token);
       localStorage.setItem("user", JSON.stringify(user));
 
-      alert("Đăng ký thành công!");
+      toast.success("Đăng ký thành công!");
       window.location.href = "/";
     } catch (error) {
       console.error(error);
-      alert(error.response?.data?.message || "Đăng ký thất bại");
+      toast.error(error.response?.data?.message || "Đăng ký thất bại");
     }
   };
 
