@@ -18,7 +18,7 @@ const menuItems = [
   { name: "Banners", icon: <Image size={20} />, path: "/admin/banners" }, 
   { name: "Notifications", icon: <Bell size={20} />, path: "/admin/notifications" },
   { name: "Content", icon: <FileText size={20} />, path: "/admin/content" }, 
-  { name: "Settings", icon: <Settings size={20} />, path: "/admin/settings" },
+  { name: "Settings", icon: <Settings size={20} />, path: "/" },
 ];
 
 export default function Sidebar() {

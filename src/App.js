@@ -4,6 +4,7 @@ import { useLocation } from "react-router-dom";
 import AppRoutes from "./Routes";
 import Header from "./features/Header/Header";
 import Loading from "./components/Loading";
+import ChatBot from "./features/ChatBot";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true);
@@ -33,6 +34,7 @@ function AppContent() {
       <main>
         <AppRoutes />
       </main>
+        {!isAdminRoute && <ChatBot />}
     </div>
   );
 }
@@ -40,8 +42,6 @@ function AppContent() {
 
 export default function App() {
   return (
-    <BrowserRouter>
       <AppContent />
-    </BrowserRouter>
   );
 }

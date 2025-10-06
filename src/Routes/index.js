@@ -8,7 +8,7 @@ import Auth from '../Pages/Auth';
 import AdminDashboard from '../Pages/AdminDashboard';
 import AdminProducts from '../Pages/admin/AdminProduct';
 import AdminCategories from '../Pages/admin/AdminCategories/AdminCategories';
-
+import Cart from '../components/Cart/Cart';
 const AppRoutes = () => {
   return (
     <Routes>
@@ -16,6 +16,7 @@ const AppRoutes = () => {
       <Route path="/category/:slug" element={<CategoryPage />} />
        <Route path="/product/:slug" element={<ProductDetail />} />
       <Route path="/account/login" element={<Auth />} />
+      <Route path="/cart" element={<Cart/>} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/products" element={<AdminProducts />} />
       <Route path="/admin/categories" element={<AdminCategories />} />

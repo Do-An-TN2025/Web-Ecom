@@ -11,6 +11,8 @@ import {
 import { getCategories } from "../../../services/categoryService";
 import axios from "axios";
 
+import { toast } from 'react-toastify';
+
 const defaultForm = {
   name: "",
   slug: "",
@@ -19,6 +21,7 @@ const defaultForm = {
   tags: "",
   categoryId: "",
 };
+
 
 const ProductDrawer = ({ open, onClose, onSuccess }) => {
   const [form, setForm] = useState(defaultForm);
@@ -62,7 +65,7 @@ const ProductDrawer = ({ open, onClose, onSuccess }) => {
       onClose();
     } catch (err) {
       console.error("❌ Lỗi tạo sản phẩm:", err.response?.data || err.message);
-      alert(err.response?.data?.message || "Không thể tạo sản phẩm!");
+      toast.error(err.response?.data?.message || "Không thể tạo sản phẩm!");
     }
   };
 

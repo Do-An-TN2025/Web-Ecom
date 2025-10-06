@@ -13,10 +13,28 @@ import {
 import { Delete as DeleteIcon } from "@mui/icons-material";
 
 export default function SizeItem({ index, size, onChange, onRemove, onSetDefault, isLast }) {
-  
+
+  const onlyDigits = (str) => str.replace(/\D/g, "");
+  const formatThousand = (num) =>
+    num === 0
+      ? "0"
+      : num
+          .toString()
+          .replace(/\B(?=(\d{3})+(?!\d))/g, ".");
+
+  const parseInputNumber = (val) => {
+    const digits = onlyDigits(val);
+    return digits ? parseInt(digits, 10) : 0;
+  };
+
   const handleFieldChange = (field, value) => {
     console.log(`Size ${index} - ${field}:`, value);
     onChange(index, field, value);
+  };
+
+  const handleNumericChange = (field, displayValue) => {
+    const numeric = parseInputNumber(displayValue);
+    handleFieldChange(field, numeric);
   };
 
   const handleDefaultChange = (checked) => {
@@ -68,29 +86,32 @@ export default function SizeItem({ index, size, onChange, onRemove, onSetDefault
           />
         </Grid>
 
-        {/* Stock */}
+        {/* Stock (formatted) */}
         <Grid item xs={6} sm={4} md={2}>
           <TextField
             label="Tồn kho"
-            type="number"
-            value={size.stock || 0}
-            onChange={(e) => handleFieldChange('stock', parseInt(e.target.value) || 0)}
+            value={formatThousand(size.stock || 0)}
+            onChange={(e) => handleNumericChange("stock", e.target.value)}
             fullWidth
             size="small"
-            inputProps={{ min: 0 }}
+            inputMode="numeric"
+            placeholder="0"
           />
         </Grid>
 
-        {/* Price */}
+        {/* Price (formatted) */}
         <Grid item xs={6} sm={4} md={2}>
           <TextField
             label="Giá bán"
-            type="number"
-            value={size.price || 0}
-            onChange={(e) => handleFieldChange('price', parseInt(e.target.value) || 0)}
+            value={formatThousand(size.price || 0)}
+            onChange={(e) => handleNumericChange("price", e.target.value)}
             fullWidth
             size="small"
-            inputProps={{ min: 0 }}
+            inputMode="numeric"
+            placeholder="0"
+            InputProps={{
+              endAdornment: <InputAdornment position="end">₫</InputAdornment>,
+            }}
           />
         </Grid>
 
@@ -134,23 +155,27 @@ export default function SizeItem({ index, size, onChange, onRemove, onSetDefault
               <Grid item xs={12} sm={4}>
                 <TextField
                   label="Giá gốc"
-                  type="number"
-                  value={size.originalPrice || size.price || 0}
-                  onChange={(e) => handleFieldChange('originalPrice', parseInt(e.target.value) || 0)}
+                  value={formatThousand(size.originalPrice || size.price || 0)}
+                  onChange={(e) => handleNumericChange("originalPrice", e.target.value)}
                   fullWidth
                   size="small"
-                  inputProps={{ min: 0 }}
+                  inputMode="numeric"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">₫</InputAdornment>,
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
                 <TextField
                   label="Giá khuyến mãi"
-                  type="number"
-                  value={size.discountPrice || 0}
-                  onChange={(e) => handleFieldChange('discountPrice', parseInt(e.target.value) || 0)}
+                  value={formatThousand(size.discountPrice || 0)}
+                  onChange={(e) => handleNumericChange("discountPrice", e.target.value)}
                   fullWidth
                   size="small"
-                  inputProps={{ min: 0 }}
+                  inputMode="numeric"
+                  InputProps={{
+                    endAdornment: <InputAdornment position="end">₫</InputAdornment>,
+                  }}
                 />
               </Grid>
               <Grid item xs={12} sm={4}>
@@ -158,7 +183,12 @@ export default function SizeItem({ index, size, onChange, onRemove, onSetDefault
                   label="Giảm giá %"
                   type="number"
                   value={size.discountPercent || 0}
-                  onChange={(e) => handleFieldChange('discountPercent', parseInt(e.target.value) || 0)}
+                  onChange={(e) =>
+                    handleFieldChange(
+                      "discountPercent",
+                      parseInt(e.target.value, 10) || 0
+                    )
+                  }
                   fullWidth
                   size="small"
                   InputProps={{
