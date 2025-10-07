@@ -12,6 +12,15 @@ function AppContent() {
 
   const isAdminRoute = location.pathname.startsWith("/admin");
 
+
+  useEffect(() => {
+  const legacy = localStorage.getItem("token");
+  if (legacy && !localStorage.getItem("auth_token")) {
+    localStorage.setItem("auth_token", legacy);
+    localStorage.removeItem("token");
+  }
+}, []);
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsLoading(false);

@@ -76,4 +76,4 @@ export const CartProvider = ({ children }) => {
 
 export const useCart = () => useContext(CCartCtx);
 
-const CCartCtx = CartCtx; // tránh export nhầm
+const CCartCtx = CartCtx;

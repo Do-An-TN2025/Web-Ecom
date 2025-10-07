@@ -85,7 +85,7 @@ export default function ChatBot({ hiddenOnAdmin }) {
     setClosingReason(null);
   }, [clearConversation]);
 
-  // Attempt close with confirm logic
+  // Attempt close with confirm logic   
   const attemptClose = useCallback(
     (reason = "button") => {
       if (!hasActiveConversation()) {

@@ -1,15 +1,13 @@
 import axios from "axios";
 
 const BASE_URL = (process.env.REACT_APP_API_URL || "").replace(/\/$/, "");
-const API_URL = `${BASE_URL}/users`;
+const TOKEN_KEY = "auth_token";
 
-// Optional: axios instance (reuse headers, interceptors later)
 const api = axios.create({
   baseURL: BASE_URL,
   withCredentials: false
 });
 
-// Helper: set / clear Authorization header globally for this instance
 export const setAuthToken = (token) => {
   if (token) {
     api.defaults.headers.common.Authorization = `Bearer ${token}`;
@@ -18,70 +16,84 @@ export const setAuthToken = (token) => {
   }
 };
 
-/* ========== AUTH ========== */
-export const loginService = async (data) => {
-  const { data: res } = await api.post(`/users/login`, data);
-  return res;
+const persistAuth = (data) => {
+  if (data?.token) {
+    localStorage.setItem(TOKEN_KEY, data.token);
+    setAuthToken(data.token);
+  }
+  if (data?.user) {
+    localStorage.setItem("user", JSON.stringify(data.user));
+  }
 };
 
-export const registerService = async (data) => {
-  const { data: res } = await api.post(`/users/register`, data);
-  return res;
+// ---- AUTH ----
+export const loginService = async (payload) => {
+  const { data } = await api.post("/users/login", payload);
+  persistAuth(data);
+  return data;
 };
 
-export const registerAdminService = async (data) => {
-  // Requires admin token already set via setAuthToken
-  const { data: res } = await api.post(`/users/register-admin`, data);
-  return res;
+export const registerService = async (payload) => {
+  const { data } = await api.post("/users/register", payload);
+  persistAuth(data);
+  return data;
 };
 
-/* ========== PROFILE ========== */
+export const socialLoginService = async (idToken) => {
+  const { data } = await api.post("/users/social-login", { idToken });
+  persistAuth(data);
+  return data;
+};
+
+export const registerAdminService = async (payload) => {
+  const { data } = await api.post("/users/register-admin", payload);
+  return data;
+};
+
+// ---- PROFILE ----
 export const getMeService = async () => {
-  const { data } = await api.get(`/users/me`);
+  const { data } = await api.get("/users/me");
   return data;
 };
 
 export const updateMeService = async (payload) => {
-  const { data } = await api.put(`/users/me`, payload);
+  const { data } = await api.put("/users/me", payload);
   return data;
 };
 
-/* ========== ADDRESSES ========== */
+// ---- ADDRESSES ----
 export const getAddressesService = async () => {
-  const { data } = await api.get(`/users/address`);
-  return data; // array
+  const { data } = await api.get("/users/address");
+  return data;
 };
-
 export const addAddressService = async (payload) => {
-  const { data } = await api.post(`/users/address`, payload);
-  return data; // updated array
+  const { data } = await api.post("/users/address", payload);
+  return data;
 };
-
-export const updateAddressService = async (addressId, payload) => {
-  const { data } = await api.put(`/users/address/${addressId}`, payload);
+export const updateAddressService = async (id, payload) => {
+  const { data } = await api.put(`/users/address/${id}`, payload);
+  return data;
+};
+export const deleteAddressService = async (id) => {
+  const { data } = await api.delete(`/users/address/${id}`);
+  return data;
+};
+export const setDefaultAddressService = async (id) => {
+  const { data } = await api.patch(`/users/address/${id}/default`);
   return data;
 };
 
-export const deleteAddressService = async (addressId) => {
-  const { data } = await api.delete(`/users/address/${addressId}`);
-  return data;
-};
-
-export const setDefaultAddressService = async (addressId) => {
-  const { data } = await api.patch(`/users/address/${addressId}/default`);
-  return data;
-};
-
-/* ========== UTILS (optional wrappers) ========== */
+// ---- TOKEN HELPER ----
 export const applyTokenFromStorage = () => {
   const token =
-    localStorage.getItem("token") ||
-    sessionStorage.getItem("token");
+    localStorage.getItem(TOKEN_KEY) || sessionStorage.getItem(TOKEN_KEY);
   if (token) setAuthToken(token);
+  return token;
 };
 
 export const logoutService = () => {
   setAuthToken(null);
-  localStorage.removeItem("auth_token");
-  sessionStorage.removeItem("auth_token");
+  localStorage.removeItem(TOKEN_KEY);
+  sessionStorage.removeItem(TOKEN_KEY);
+  localStorage.removeItem("user");
 };
