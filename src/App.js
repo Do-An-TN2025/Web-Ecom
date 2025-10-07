@@ -40,10 +40,10 @@ function AppContent() {
     <div className="min-h-screen">
       {isLoading && <Loading />}
       {!isAdminRoute && <Header />}
-      <main>
+      <main className={!isAdminRoute ? 'pt-[40px] md:pt-[60px]' : ''}>
         <AppRoutes />
       </main>
-        {!isAdminRoute && <ChatBot />}
+      {!isAdminRoute && <ChatBot />}
     </div>
   );
 }

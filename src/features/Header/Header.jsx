@@ -1,5 +1,6 @@
 import { useEffect, useState, useRef, useCallback } from "react";
 import { useNavigate, Link, useLocation } from "react-router-dom";
+import { Search, X, Heart, Menu } from "lucide-react";
 import { getCategories } from "../../services/categoryService";
 import { searchProducts } from "../../services/productService";
 import { useCart } from "../../contexts/CartContext";
@@ -14,305 +15,266 @@ export default function Header() {
   const location = useLocation();
   const { totalItems, items } = useCart();
 
-  // UI state
   const [scrolled, setScrolled] = useState(false);
-  const [mode, setMode] = useState("none"); // 'none' | 'categories' | 'search'
+  const [mode, setMode] = useState("none"); // none | categories | search
   const [categories, setCategories] = useState([]);
-
-  // Search
   const [query, setQuery] = useState("");
   const [results, setResults] = useState([]);
-  const [loadingSearch, setLoadingSearch] = useState(false);
-  const [debouncing, setDebouncing] = useState(false);
-  const searchTimerRef = useRef(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [isDebouncing, setIsDebouncing] = useState(false);
+
+  const debounceRef = useRef(null);
   const abortRef = useRef(null);
-
-  // User (tối giản)
-  const [user, setUser] = useState(null);
-
+  const inputRef = useRef(null);
   const headerRef = useRef(null);
+  const scrollRef = useRef(window.scrollY);
 
-  /* ---------- Effects ---------- */
-  useEffect(() => {
-    const saved = localStorage.getItem("user");
-    if (saved) setUser(JSON.parse(saved));
-  }, []);
+  const trimmedQuery = query.trim();
+  const hasQuery = trimmedQuery.length > 0;
+  const isSearching = isDebouncing || isLoading;
+  const showCategoryPanel = mode === "search" && !hasQuery;
+  const showResultsPanel = mode === "search" && hasQuery && !isSearching;
 
-  useEffect(() => {
-    const onScroll = () => setScrolled(window.scrollY > 8);
-    window.addEventListener("scroll", onScroll);
-    return () => window.removeEventListener("scroll", onScroll);
-  }, []);
+  const miniSubtotal = items.reduce((sum, item) => sum + item.price * item.qty, 0);
 
   useEffect(() => {
     getCategories().then(setCategories).catch(() => {});
   }, []);
 
-  // Close overlays when route changes
+  useEffect(() => {
+    const handleScroll = () => {
+      const y = window.scrollY;
+      setScrolled(y > 12);
+      if (mode === "search" && y > scrollRef.current + 50) {
+        closeSearch();
+      }
+      scrollRef.current = y;
+    };
+
+    window.addEventListener("scroll", handleScroll, { passive: true });
+    return () => window.removeEventListener("scroll", handleScroll);
+  }, [mode]);
+
   useEffect(() => {
     setMode("none");
     setQuery("");
+    setResults([]);
   }, [location.pathname]);
 
-  // Outside click
+  // Lock body scroll when an overlay (search or categories) is open on mobile to prevent background scroll.
   useEffect(() => {
-    const handler = (e) => {
-      if (headerRef.current && !headerRef.current.contains(e.target)) {
+    if (mode !== "none") {
+      const original = document.body.style.overflow;
+      document.body.style.overflow = "hidden";
+      return () => {
+        document.body.style.overflow = original;
+      };
+    }
+  }, [mode]);
+
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (!headerRef.current || headerRef.current.contains(event.target)) return;
+      closeSearch();
+      setMode("none");
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  useEffect(() => {
+    const handleShortcut = (event) => {
+      if (event.key === "/" && !event.metaKey && !event.ctrlKey) {
+        event.preventDefault();
+        openSearch(true);
+      }
+      if (event.key === "Escape") {
+        closeSearch();
         setMode("none");
       }
     };
-    document.addEventListener("mousedown", handler);
-    return () => document.removeEventListener("mousedown", handler);
+    window.addEventListener("keydown", handleShortcut);
+    return () => window.removeEventListener("keydown", handleShortcut);
   }, []);
 
-  // Shortcut "/"
-  useEffect(() => {
-    const keyHandler = (e) => {
-      if (e.key === "/" && !e.metaKey && !e.ctrlKey) {
-        e.preventDefault();
-        setMode("search");
-        const inp = document.getElementById("main-search-input");
-        inp?.focus();
-      }
-      if (e.key === "Escape") {
-        setMode("none");
-      }
-    };
-    window.addEventListener("keydown", keyHandler);
-    return () => window.removeEventListener("keydown", keyHandler);
-  }, []);
-
-  // Debounced search
   useEffect(() => {
     if (abortRef.current) abortRef.current.abort();
-    if (!query.trim()) {
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+
+    if (!hasQuery) {
       setResults([]);
-      setLoadingSearch(false);
-      setDebouncing(false);
+      setIsDebouncing(false);
+      setIsLoading(false);
       return;
     }
-    if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
-    setDebouncing(true);
-    abortRef.current = new AbortController();
-    searchTimerRef.current = setTimeout(async () => {
-      setDebouncing(false);
-      setLoadingSearch(true);
+
+    setResults([]);
+    setIsDebouncing(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    debounceRef.current = setTimeout(async () => {
+      setIsDebouncing(false);
+      setIsLoading(true);
       try {
-        const data = await searchProducts(
-          { q: query },
-            { signal: abortRef.current.signal }
-        );
-        setResults(data?.products || []);
-      } catch (err) {
-        if (err.name !== "AbortError") setResults([]);
+        const response = await searchProducts({ q: trimmedQuery }, { signal: controller.signal });
+        setResults(response?.products || []);
+      } catch (error) {
+        if (error.name !== "AbortError") setResults([]);
       } finally {
-        setLoadingSearch(false);
+        setIsLoading(false);
         abortRef.current = null;
       }
-    }, 450);
+    }, 400);
+
     return () => {
-      if (searchTimerRef.current) clearTimeout(searchTimerRef.current);
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+      if (abortRef.current) abortRef.current.abort();
     };
-  }, [query]);
+  }, [trimmedQuery]);
 
-  /* ---------- Helpers ---------- */
-  const miniSubtotal = items.reduce((s, it) => s + it.price * it.qty, 0);
-  const isCatPage = location.pathname.startsWith("/category");
+  const openCategories = useCallback(() => {
+    setMode((prev) => (prev === "categories" ? "none" : "categories"));
+  }, []);
 
-  const openCategories = () => {
-    setMode((m) => (m === "categories" ? "none" : "categories"));
-  };
-  const openSearch = () => {
-    setMode("search");
-    setTimeout(() => {
-      document.getElementById("main-search-input")?.focus();
-    }, 0);
-  };
-  const clearAndCloseSearch = () => {
+  const openSearch = useCallback(
+    (focus = false) => {
+      setMode("search");
+      if (focus) requestAnimationFrame(() => inputRef.current?.focus());
+    },
+    []
+  );
+
+  const clearQuery = () => {
     setQuery("");
-    setMode("none");
+    setResults([]);
+    requestAnimationFrame(() => inputRef.current?.focus());
   };
+
+  const closeSearch = useCallback(() => {
+    setMode("none");
+    setQuery("");
+    setResults([]);
+    setIsDebouncing(false);
+    setIsLoading(false);
+    abortRef.current?.abort();
+  }, []);
 
   const handleCategoryClick = useCallback(
     (slug) => {
-      setMode("none");
+      closeSearch();
       navigate(`/category/${slug}`);
     },
-    [navigate]
+    [closeSearch, navigate]
   );
 
   const handleProductClick = useCallback(
     (slug) => {
-      setMode("none");
-      setQuery("");
+      closeSearch();
       navigate(`/product/${slug}`);
     },
-    [navigate]
+    [closeSearch, navigate]
   );
 
-  const showSearchPanel =
-    mode === "search" && (query.trim() || debouncing || loadingSearch);
-
-  /* ---------- UI Sub Components ---------- */
-  const SearchInput = () => (
-    <div
-      className={`relative flex w-full items-center rounded-xl border bg-white transition focus-within:ring-2 focus-within:ring-black/50
-        ${mode === "search" ? "border-black/50" : "border-gray-200"}`}
-    >
-      <span className="px-3 text-gray-400">
-        <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-          <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.8-4.8m0 0A7.2 7.2 0 1010.2 17.4z" />
-        </svg>
-      </span>
-      <input
-        id="main-search-input"
-        type="text"
-        value={query}
-        onChange={(e) => setQuery(e.target.value)}
-        placeholder="Tìm sản phẩm... ( / )"
-        className="h-10 flex-1 bg-transparent text-sm outline-none placeholder:text-gray-400"
-        onFocus={() => setMode("search")}
-        autoComplete="off"
-        aria-label="Tìm kiếm sản phẩm"
-      />
-      {(query || debouncing || loadingSearch) && (
-        <button
-          type="button"
-          onClick={() => {
-            setQuery("");
-            const inp = document.getElementById("main-search-input");
-            inp?.focus();
-          }}
-          className="px-3 text-gray-400 hover:text-gray-600"
-          aria-label="Xóa tìm kiếm"
-        >
-          {loadingSearch ? (
-            <svg className="h-5 w-5 animate-spin" viewBox="0 0 24 24">
-              <circle
-                className="opacity-25"
-                cx="12"
-                cy="12"
-                r="10"
-                stroke="currentColor"
-                strokeWidth="4"
-                fill="none"
-              />
-              <path
-                className="opacity-75"
-                fill="currentColor"
-                d="M4 12a8 8 0 018-8v4l3.5-3.5L12 0v4a8 8 0 100 16v4l3.5-3.5L12 20v4a8 8 0 01-8-8z"
-              />
-            </svg>
-          ) : (
-            <svg className="h-5 w-5" stroke="currentColor" fill="none" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18L18 6M6 6l12 12" />
-            </svg>
-          )}
-        </button>
-      )}
-    </div>
-  );
-
-  /* ---------- Render ---------- */
   return (
     <>
       <header
         ref={headerRef}
-        className={`fixed inset-x-0 top-0 z-50 border-b transition-colors ${
-          scrolled || mode !== "none"
-            ? "bg-white/95 backdrop-blur shadow-sm"
-            : "bg-transparent"
+        className={`fixed inset-x-0 top-0 z-50 border-b bg-white transition-shadow ${
+          scrolled || mode !== "none" ? "shadow-lg" : "shadow-sm"
         }`}
-      >
-        <div className="mx-auto flex h-16 max-w-7xl items-center gap-3 px-3 md:gap-5 md:px-6">
-          {/* Mobile: left cluster */}
-          <div className="flex items-center gap-2 md:hidden">
+      > 
+        <div className="mx-auto relative flex h-14 max-w-7xl items-center justify-between gap-2 px-3 sm:gap-3 sm:px-4 md:h-20 md:gap-4 md:px-6">
+          {/* Left: Mobile menu button (desktop: shares space with logo area) */}
+          <div className="flex items-center md:gap-3">
             <button
               onClick={openCategories}
+              className="inline-flex h-11 w-11 items-center justify-center rounded-full border border-zinc-200 bg-white text-zinc-600 transition hover:border-yellow-400 hover:bg-yellow-50 md:hidden"
               aria-label="Mở danh mục"
-              className={`flex h-10 w-10 items-center justify-center rounded-lg border transition ${
-                mode === "categories"
-                  ? "border-yellow-500 bg-yellow-50 text-yellow-700"
-                  : "border-gray-200 bg-white text-gray-700 hover:bg-gray-100"
-              } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500`}
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-              </svg>
-            </button>
-          </div>
-
-          {/* Logo */}
-          <div className="flex flex-1 justify-start md:w-auto md:flex-none">
-            <Link to="/" className="inline-flex items-center" aria-label="Trang chủ">
-              <Logo width={150} height={38} />
-            </Link>
-          </div>
-
-            {/* Desktop Search + Category */}
-          <div className="hidden flex-1 items-center gap-3 md:flex">
-            <button
-              onClick={openCategories}
-              className={`flex items-center gap-2 rounded-lg border px-3 py-2 text-sm font-medium transition ${
-                mode === "categories" || isCatPage
-                  ? "border-yellow-500 bg-yellow-50 text-yellow-700"
-                  : "border-gray-200 bg-white text-gray-700 hover:bg-gray-100"
-              } focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-yellow-500`}
               aria-expanded={mode === "categories"}
+              aria-controls="category-panel"
+              type="button"
             >
-              <svg className="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
-              </svg>
-              <span>Danh mục</span>
-              <svg
-                className={`h-4 w-4 transition-transform ${
-                  mode === "categories" ? "rotate-180" : ""
-                }`}
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" />
-              </svg>
+              <Menu className="h-5 w-5" />
             </button>
-            <div className="flex-1">
-              <SearchInput />
+          </div>
+
+          {/* Center: Logo (absolutely centered on mobile, normal flow on md+) */}
+          <Link
+            to="/"
+            className="pointer-events-auto absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 inline-flex items-center md:static md:translate-x-0 md:translate-y-0"
+            aria-label="Trang chủ"
+          >
+            <Logo width={140} height={38} />
+          </Link>
+
+          <button
+            onClick={openCategories}
+            className="hidden items-center gap-2 rounded-full border border-zinc-200 bg-white px-4 py-2 text-sm font-medium text-zinc-700 transition hover:border-yellow-400 hover:bg-yellow-50 md:inline-flex"
+            aria-label="Danh mục"
+            aria-expanded={mode === "categories"}
+            aria-controls="category-panel"
+            type="button"
+          >
+            <Menu className="h-4 w-4" />
+            Danh mục
+          </button>
+
+          {/* Desktop / Tablet search bar */}
+          <div className="hidden min-w-0 flex-1 md:block">
+            <div
+              className={`group relative flex items-center rounded-full border border-transparent bg-zinc-100 pl-5 pr-3 transition ${
+                mode === "search" ? "ring-2 ring-yellow-400" : "hover:bg-zinc-200"
+              }`}
+            >
+              <Search className="mr-3 h-5 w-5 text-zinc-400" />
+              <input
+                ref={inputRef}
+                id="main-search-input"
+                type="text"
+                value={query}
+                onFocus={() => openSearch()}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Tìm kiếm sản phẩm "
+                className="h-11 w-full bg-transparent text-sm text-zinc-700 outline-none placeholder:text-zinc-400"
+                autoComplete="off"
+                aria-label="Tìm kiếm sản phẩm"
+              />
+              {query && (
+                <button
+                  type="button"
+                  onClick={clearQuery}
+                  className="rounded-full p-2 text-zinc-400 transition hover:bg-white hover:text-zinc-600"
+                  aria-label="Xóa tìm kiếm"
+                >
+                  {isLoading ? (
+                    <div className="h-5 w-5 animate-spin rounded-full border-2 border-zinc-300 border-t-zinc-500" />
+                  ) : (
+                    <X className="h-4 w-4" />
+                  )}
+                </button>
+              )}
             </div>
           </div>
 
-          {/* Actions */}
-          <div className="flex items-center gap-1 md:gap-3">
-            {/* Mobile search icon */}
+          {/* Right: actions (User + Cart) */}
+          <div className="flex items-center gap-2 sm:gap-3">
             <button
-              onClick={openSearch}
-              className="flex h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 md:hidden"
-              aria-label="Tìm kiếm"
-            >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M21 21l-4.8-4.8m0 0A7.2 7.2 0 1010.2 17.4z" />
-              </svg>
-            </button>
-
-            <Link
-              to="/wishlist"
+              onClick={() => navigate("/wishlist")}
+              className="relative hidden h-11 w-11 items-center justify-center rounded-full border border-transparent text-zinc-600 transition hover:border-rose-200 hover:bg-yellow-50 hover:text-yellow-500 sm:flex"
               aria-label="Yêu thích"
-              className="hidden h-10 w-10 items-center justify-center rounded-lg border border-gray-200 bg-white text-gray-600 hover:bg-gray-100 md:flex"
+              type="button"
             >
-              <svg className="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M21 8.25c0-2.485-2.099-4.5-4.688-4.5-1.935 0-3.597 1.126-4.312 2.733-.715-1.607-2.377-2.733-4.313-2.733C5.1 3.75 3 5.765 3 8.25c0 7.22 9 12 9 12s9-4.78 9-12z"
-                />
-              </svg>
-            </Link>
-
-            <UserMenu />
+              <Heart className="h-7 w-7" />
+            </button>
+            <div className="hidden md:block"><UserMenu /></div>
+            {/* Show user menu inline on mobile as requested */}
+            <div className="md:hidden"><UserMenu /></div>
 
             <div className="relative">
               <CartButton onClick={() => navigate("/cart")} />
               {totalItems > 0 && (
-                <span className="absolute -top-1 -right-1 rounded-full bg-red-600 px-1.5 text-[10px] font-semibold text-white">
+                <span className="absolute -top-1 -right-1 rounded-full bg-yellow-400 px-1.5 text-[10px] font-semibold text-zinc-900">
                   {totalItems > 99 ? "99+" : totalItems}
                 </span>
               )}
@@ -320,52 +282,52 @@ export default function Header() {
           </div>
         </div>
 
-        {/* Mobile search bar slide */}
-        <div
-          className={`md:hidden transition-[max-height,opacity] duration-300 ${
-            mode === "search" ? "max-h-20 opacity-100" : "max-h-0 opacity-0"
-          } overflow-hidden px-3 pb-3`}
-        >
-          <SearchInput />
-        </div>
-
-        {/* Category Menu (desktop & mobile) */}
-        {mode === "categories" && (
-          <CategoryMenu
-            categories={categories}
-            show={true}
-            setShow={() => setMode("none")}
-            onCategoryClick={handleCategoryClick}
-          />
+        {(mode === "categories" || showCategoryPanel) && (
+          <div id="category-panel">
+            <CategoryMenu
+              categories={categories}
+              show
+              setShow={closeSearch}
+              onCategoryClick={handleCategoryClick}
+            />
+          </div>
         )}
 
-        {/* Search Results Overlay */}
-        {showSearchPanel && (
+        {/* Mobile search completely removed per new layout requirement */}
+
+        {showResultsPanel && (
           <SearchResultsMenu
             results={results}
             onItemClick={handleProductClick}
-            loading={loadingSearch}
-            debouncing={debouncing}
-            onClose={clearAndCloseSearch}
-            searchQuery={query}
+            loading={false}
+            debouncing={false}
+            searchQuery={trimmedQuery}
           />
         )}
+
+        {mode === "search" && hasQuery && isSearching && (
+          <div
+            className="absolute left-0 right-0 top-full z-40 bg-white px-4 py-3 text-sm text-zinc-500 shadow-sm"
+            aria-live="polite"
+            aria-atomic="true"
+          >
+            <div className="mx-auto flex max-w-7xl items-center gap-2">
+              <div className="h-4 w-4 animate-spin rounded-full border-2 border-zinc-200 border-t-zinc-500" />
+              Đang tìm kiếm...
+            </div>
+          </div>
+        )}
       </header>
-
-      {/* Spacer */}
-      <div className="h-16" />
-
-      {/* Optional dim backdrop when overlays open */}
       {mode !== "none" && (
         <div
+          className="fixed inset-0 z-40 bg-black/25 backdrop-blur-[1px]"
           onClick={() => setMode("none")}
-          className="fixed inset-0 z-40 bg-black/20 backdrop-blur-[1px] md:bg-black/10"
+          role="presentation"
         />
       )}
 
-      {/* Mini subtotal tooltip (optional simple) */}
       {totalItems > 0 && (
-        <div className="pointer-events-none fixed bottom-4 right-4 z-40 hidden rounded-full bg-black/80 px-4 py-2 text-xs font-medium text-white shadow md:block">
+        <div className="pointer-events-none fixed bottom-4 right-4 z-40 hidden rounded-full bg-black/85 px-4 py-2 text-xs font-medium text-white shadow md:block">
           {totalItems} sp • {miniSubtotal.toLocaleString()}đ
         </div>
       )}

@@ -232,7 +232,7 @@ export default function Profile() {
   }
 
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="max-w-7xl mx-auto px-4 py-8">
       <div className="grid md:grid-cols-4 gap-8">
         {/* Sidebar */}
         <aside className="md:col-span-1 space-y-6">

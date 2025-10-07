@@ -1,152 +1,90 @@
-import { useState } from "react";
+import { useState, useCallback } from "react";
 
 export default function SearchResultsMenu({
-  results,
+  results = [],
   onItemClick,
-  onClose,
   loading,
-  searchQuery,
+  debouncing,
+  searchQuery
 }) {
   const [selectedColors, setSelectedColors] = useState({});
-
-  const handleColorClick = (productId, colorIndex, e) => {
+  const handleColorClick = useCallback((pid, idx, e) => {
     e.stopPropagation();
-    setSelectedColors((prev) => ({
-      ...prev,
-      [productId]: colorIndex,
-    }));
-  };
+    setSelectedColors(prev => ({ ...prev, [pid]: idx }));
+  }, []);
 
   return (
-    <div className="w-full bg-white shadow-lg border-t border-gray-200 px-8 py-6">
-      <div className="container mx-auto">
-        <h3 className="font-bold text-gray-900 mb-4 text-lg">
-          Kết quả tìm kiếm cho "
-          <span className="text-red-600">{searchQuery}</span>"
-        </h3>
-
-        {loading ? (
-          <div className="flex justify-center items-center py-12">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
-            <span className="ml-3 text-gray-600">Đang tìm kiếm...</span>
-          </div>
-        ) : results.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-6">
-            {results.map((product) => {
-              const selectedColorIndex = selectedColors[product._id] || 0;
-              const activeVariant = product.colorVariants?.[selectedColorIndex];
-              const mainImage =
-                activeVariant?.images?.[0] || "/placeholder.jpg";
-              const hoverImage = activeVariant?.images?.[1] || mainImage;
-
-              // % giảm giá
-              const discountPercent =
-                product.onSale && product.price > product.discountPrice
-                  ? Math.round(
-                      ((product.price - product.discountPrice) /
-                        product.price) *
-                        100
-                    )
-                  : 0;
-
-              return (
-                <button
-                  key={product._id}
-                  onClick={() => onItemClick(product.slug)}
-                  className="flex flex-col group text-left"
-                >
-                  <div className="relative aspect-[5/5] overflow-hidden rounded-lg bg-gray-100 shadow-sm transition-all duration-300 group-hover:shadow-lg">
+    <div
+      onMouseDown={e => {
+        if (!["A","BUTTON","INPUT","TEXTAREA"].includes(e.target.tagName)) {
+          e.preventDefault(); // giữ focus input nhưng không ép refocus
+        }
+      }}
+      className="absolute left-0 right-0 top-full z-40 bg-white border-b border-gray-100 shadow-sm px-4 pb-4 pt-2"
+    >
+      <div className="mb-2 text-sm">
+        Kết quả tìm kiếm cho <span className="font-semibold text-red-600">"{searchQuery}"</span>
+      </div>
+      {loading || debouncing ? (
+        <div className="py-4 text-sm text-gray-500">Đang tìm...</div>
+      ) : results.length === 0 ? (
+        <div className="py-4 text-sm text-gray-500">Không có sản phẩm.</div>
+      ) : (
+        <div className="grid grid-cols-2 gap-3 md:grid-cols-4 lg:grid-cols-5">
+          {results.map(p => {
+            const idx = selectedColors[p._id] || 0;
+            const variant = p.colorVariants?.[idx];
+            const main = variant?.images?.[0] || p.thumbnail;
+            const hover = variant?.images?.[1] || main;
+            return (
+              <div
+                key={p._id}
+                role="button"
+                tabIndex={-1}
+                onClick={() => onItemClick && onItemClick(p.slug)}
+                className="text-left group border rounded-lg overflow-hidden hover:shadow-sm transition bg-white cursor-pointer"
+              >
+                <div className="aspect-square bg-gray-50">
+                  {main && (
                     <img
-                      src={mainImage}
-                      alt={product.name}
-                      className="h-full w-full object-cover transition-transform duration-500 group-hover:scale-105"
+                      src={main}
+                      onMouseEnter={e => hover && (e.currentTarget.src = hover)}
+                      onMouseLeave={e => main && (e.currentTarget.src = main)}
+                      alt={p.name}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
                     />
-                    {hoverImage !== mainImage && (
-                      <img
-                        src={hoverImage}
-                        alt={`${product.name} hover`}
-                        className="absolute inset-0 h-full w-full object-cover opacity-0 transition-opacity duration-500 group-hover:opacity-100"
-                      />
-                    )}
-
-                    {discountPercent > 0 && (
-                      <span className="absolute top-2 left-2 bg-red-600 text-white text-[10px] px-1 py-0.5 rounded-full shadow">
-                        -{discountPercent}%
-                      </span>
-                    )}
+                  )}
+                </div>
+                <div className="p-2">
+                  <div className="line-clamp-2 text-xs font-medium text-gray-700 group-hover:text-gray-900">
+                    {p.name}
                   </div>
-
-                  <div className="mt-2 flex flex-col gap-1">
-                    <h3 className="text-sm font-semibold text-gray-800 group-hover:text-red-600 line-clamp-2">
-                      {product.name}
-                    </h3>
-
-                    <div className="flex items-center gap-2">
-                      <span className="text-base font-bold text-red-600">
-                        {product.discountPrice?.toLocaleString("vi-VN")}₫
-                      </span>
-                      {discountPercent > 0 && (
-                        <span className="text-xs text-gray-400 line-through">
-                          {product.price?.toLocaleString("vi-VN")}₫
-                        </span>
-                      )}
+                  {p.price != null && (
+                    <div className="mt-1 text-[11px] font-semibold text-red-600">
+                      {p.price.toLocaleString()}đ
                     </div>
-
-                    {/* Swatches màu */}
-                    <div className="flex gap-1 mt-1">
-                      {product.colorVariants?.map((variant, index) => (
-                        <button
-                          key={index}
-                          onClick={(e) =>
-                            handleColorClick(product._id, index, e)
-                          }
-                          className={`h-3 w-3 rounded-full border-2 transition-transform ${
-                            selectedColorIndex === index
-                              ? "border-yellow-500 scale-110"
-                              : "border-gray-200 hover:border-gray-400"
+                  )}
+                  {p.colorVariants?.length > 1 && (
+                    <div className="mt-1 flex gap-1">
+                      {p.colorVariants.slice(0,4).map((c,i)=>(
+                        <span
+                          key={i}
+                          onClick={(e)=>handleColorClick(p._id, i, e)}
+                          className={`h-3 w-3 rounded-full border ${
+                            i===idx ? "ring-2 ring-black" : ""
                           }`}
-                          style={{ backgroundColor: variant.colorCode }}
-                          title={variant.color}
+                          style={{ backgroundColor: c.colorHex || "#ddd" }}
                         />
                       ))}
                     </div>
-                  </div>
-                </button>
-              );
-            })}
-          </div>
-        ) : (
-          <div className="text-center py-12">
-            <p className="text-gray-500 text-lg">
-              Không tìm thấy sản phẩm nào.
-            </p>
-            <p className="text-gray-400 text-sm mt-2">
-              Hãy thử với từ khóa khác
-            </p>
-          </div>
-        )}
-
-        <div className="mt-8 pt-6 border-t border-gray-200 flex justify-end">
-          <button
-            onClick={onClose}
-            className="px-4 py-2 bg-gray-100 text-gray-700 rounded-lg hover:bg-gray-200 transition-colors"
-          >
-            <svg
-              className="w-6 h-6"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M6 18L18 6M6 6l12 12"
-              />
-            </svg>
-          </button>
+                  )}
+                </div>
+              </div>
+            );
+          })}
         </div>
-      </div>
+      )}
     </div>
   );
 }
