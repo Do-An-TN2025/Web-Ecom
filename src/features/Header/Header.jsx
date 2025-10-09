@@ -4,6 +4,7 @@ import { Search, X, Heart, Menu } from "lucide-react";
 import { getCategories } from "../../services/categoryService";
 import { searchProducts } from "../../services/productService";
 import { useCart } from "../../contexts/CartContext";
+import useWishlist from "../../hooks/useWishlist";
 import Logo from "../../components/Logo";
 import CategoryMenu from "./CategoryMenu";
 import SearchResultsMenu from "./SearchResultsMenu";
@@ -14,6 +15,7 @@ export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const { totalItems, items } = useCart();
+  const { count: wishlistCount } = useWishlist();
 
   const [scrolled, setScrolled] = useState(false);
   const [mode, setMode] = useState("none"); // none | categories | search
@@ -266,6 +268,11 @@ export default function Header() {
               type="button"
             >
               <Heart className="h-7 w-7" />
+              {wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 rounded-full bg-rose-500 px-1.5 text-[10px] font-semibold text-white">
+                  {wishlistCount > 99 ? "99+" : wishlistCount}
+                </span>
+              )}
             </button>
             <div className="hidden md:block"><UserMenu /></div>
             {/* Show user menu inline on mobile as requested */}

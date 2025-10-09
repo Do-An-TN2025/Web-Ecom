@@ -207,11 +207,13 @@ export default function Profile() {
     }
   };
 
-  const logout = () => {
-    logoutService();
-    toast.info("Đã đăng xuất");
+const logout = () => {
+  logoutService();
+    localStorage.removeItem("auth_token");
+  setTimeout(() => {
     navigate("/account/login", { replace: true });
-  };
+  }, 100);
+};
 
   if (loadingUser && !user) {
     return (

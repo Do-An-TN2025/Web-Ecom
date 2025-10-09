@@ -10,16 +10,17 @@ const api = axios.create({
 
 export const setAuthToken = (token) => {
   if (token) {
-    api.defaults.headers.common.Authorization = `Bearer ${token}`;
+    api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
+    localStorage.setItem(TOKEN_KEY, token);
   } else {
-    delete api.defaults.headers.common.Authorization;
+    delete api.defaults.headers.common["Authorization"];
+    localStorage.removeItem(TOKEN_KEY);
   }
 };
 
 const persistAuth = (data) => {
   if (data?.token) {
-    localStorage.setItem(TOKEN_KEY, data.token);
-    setAuthToken(data.token);
+    setAuthToken(data.token); // chỉ gọi setAuthToken
   }
   if (data?.user) {
     localStorage.setItem("user", JSON.stringify(data.user));
@@ -91,9 +92,24 @@ export const applyTokenFromStorage = () => {
   return token;
 };
 
+
+export const getWishlistService = async () => {
+  const { data } = await api.get("/users/wishlist");
+  return data;
+};
+
+export const addToWishlistService = async (payload) => {
+  const { data } = await api.post("/users/wishlist", payload);
+  return data;
+};
+
+export const removeFromWishlistService = async (payload) => {
+  const { data } = await api.delete("/users/wishlist", { data: payload });
+  return data;
+};
+
 export const logoutService = () => {
   setAuthToken(null);
-  localStorage.removeItem(TOKEN_KEY);
   sessionStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem("user");
 };
