@@ -3,6 +3,7 @@ import { Menu } from "@headlessui/react";
 import { User, LogOut, Settings, Package } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { useIsMobile } from "../../hooks/useIsMobile"; // hook check mobile
+import { logoutService } from "../../services/AuthService";
 
 export default function UserMenu() {
   const [user, setUser] = useState(null);
@@ -15,10 +16,13 @@ export default function UserMenu() {
   }, []);
 
   const handleLogout = () => {
-    localStorage.removeItem("user");
-    localStorage.removeItem("token");
-    setUser(null);
-    navigate("/account/login");
+      console.log('Logout button clicked');
+      logoutService();
+      setUser(null);
+      window.dispatchEvent(new Event("auth:logout"));
+      setTimeout(() => {
+        navigate("/account/login", { replace: true });
+      }, 100);
   };
 
   // Nếu chưa đăng nhập
@@ -33,11 +37,10 @@ export default function UserMenu() {
     );
   }
 
-  // Nếu là mobile → chỉ hiện icon avatar, click đi tới trang account
   if (isMobile) {
     return (
       <button
-        onClick={() => navigate("/account")}
+        onClick={() => navigate("/account/profile")}
         className="p-1 rounded-full hover:bg-gray-100 transition"
       >
         {user.avatar ? (

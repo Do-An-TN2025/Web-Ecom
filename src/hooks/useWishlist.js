@@ -1,11 +1,13 @@
-import { useEffect, useState } from "react";
-import { getWishlistService , applyTokenFromStorage } from "../services/AuthService";
+import { createContext, useContext, useState, useCallback } from "react";
+import { getWishlistService, addToWishlistService, removeFromWishlistService , applyTokenFromStorage } from "../services/AuthService";
 
-export default function useWishlist() {
+const WishlistContext = createContext();
+
+export function WishlistProvider({ children }) {
   const [wishlist, setWishlist] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   applyTokenFromStorage();
-  const fetchWishlist = async () => {
+  const fetchWishlist = useCallback(async () => {
     setLoading(true);
     try {
       const data = await getWishlistService();
@@ -15,11 +17,32 @@ export default function useWishlist() {
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    fetchWishlist();
   }, []);
 
-  return { wishlist, count: wishlist.length, loading, refresh: fetchWishlist };
+  const add = async (productId) => {
+    await addToWishlistService({ productId });
+    await fetchWishlist();
+  };
+
+  const remove = async (productId) => {
+    await removeFromWishlistService({ productId });
+    await fetchWishlist();
+  };
+
+  return (
+    <WishlistContext.Provider
+      value={{
+        wishlist,
+        count: wishlist.length,
+        loading,
+        refresh: fetchWishlist,
+        add,
+        remove,
+      }}
+    >
+      {children}
+    </WishlistContext.Provider>
+  );
 }
+
+export const useWishlist = () => useContext(WishlistContext);

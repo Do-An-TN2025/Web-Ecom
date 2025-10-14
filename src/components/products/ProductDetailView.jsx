@@ -11,6 +11,8 @@ const COLOR_MAP = {
   black: "Đen",
   grey: "Xám",
   blue: "Xanh dương",
+  yellow : "Vàng",
+  red : "Đỏ",
 };
 
 export default function ProductDetailView({ product }) {
@@ -97,35 +99,54 @@ export default function ProductDetailView({ product }) {
   const { addItem } = useCart();
   const { showAdded } = useCartToast();
 
-  const handleAddToCart = () => {
+const handleAddToCart = async () => {
     if (!selectedSizeObj) return;
-    const finalPrice =
-      selectedSizeObj.discountPrice &&
-      selectedSizeObj.discountPrice < (selectedSizeObj.price || 0)
+    const basePrice = selectedSizeObj.price || selectedSizeObj.finalPrice || 0;
+    const discountPrice =
+      selectedSizeObj.discountPrice && selectedSizeObj.discountPrice < basePrice
         ? selectedSizeObj.discountPrice
-        : (selectedSizeObj.price || selectedSizeObj.finalPrice || 0);
+        : 0;
+    const finalPrice = discountPrice || basePrice;
 
-    addItem({
-      key: `${product._id}-${selectedColor.color}-${selectedSizeCode}`,
+    const cartItem = {
+      key: `${product._id}-${selectedColor._id}-${selectedSizeCode}`,
       productId: product._id,
+      variantId: selectedColor._id,
+      qty: quantity,
+      quantity: quantity,
+      price: basePrice,
+      discountPrice: discountPrice,
+      finalPrice: finalPrice,
       name: product.name,
+      image: (selectedColor.images && selectedColor.images[0]) || product.thumbnail || "/placeholder.jpg",
+      product: {
+        _id: product._id,
+        title: product.name,
+        slug: product.slug,
+        thumbnail: product.thumbnail || null
+      },
+      variant: {
+        _id: selectedColor._id,
+        images: selectedColor.images || [],
+        sizeInfo: selectedSizeObj
+      },
       color: selectedColor.color,
       colorCode: selectedColor.colorCode,
-      size: selectedSizeCode,
-      price: finalPrice,
-      qty: quantity,
-      image: (selectedColor.images && selectedColor.images[0]) || "/placeholder.jpg",
-    });
+      size: selectedSizeCode
+    };
 
-    showAdded({
-      name: product.name,
-      colorLabel: COLOR_MAP[selectedColor.color] || selectedColor.color,
-      size: selectedSizeCode,
-      qty: quantity,
-      price: finalPrice,
-      image: (selectedColor.images && selectedColor.images[0]) || "/placeholder.jpg"
-    });
-    // Option: reset quantity
+    // debug: log payload
+    console.debug('[ProductDetailView] addItem payload:', cartItem);
+
+    try {
+      const res = await addItem(cartItem);
+      // debug: log response from CartService / CartContext
+      console.debug('[ProductDetailView] addItem result:', res);
+    } catch (err) {
+      console.error('[ProductDetailView] addItem failed', err);
+    }
+
+    showAdded({ name: product.name, colorLabel: COLOR_MAP[selectedColor.color] || selectedColor.color, size: selectedSizeCode, qty: quantity, price: finalPrice, image: (selectedColor.images && selectedColor.images[0]) || "/placeholder.jpg" });
     setQuantity(1);
   };
 

@@ -208,8 +208,8 @@ export default function Profile() {
   };
 
 const logout = () => {
+  console.log('Logout button clicked');
   logoutService();
-    localStorage.removeItem("auth_token");
   setTimeout(() => {
     navigate("/account/login", { replace: true });
   }, 100);

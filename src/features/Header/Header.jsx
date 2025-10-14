@@ -4,7 +4,7 @@ import { Search, X, Heart, Menu } from "lucide-react";
 import { getCategories } from "../../services/categoryService";
 import { searchProducts } from "../../services/productService";
 import { useCart } from "../../contexts/CartContext";
-import useWishlist from "../../hooks/useWishlist";
+import { useWishlist } from "../../hooks/useWishlist";
 import Logo from "../../components/Logo";
 import CategoryMenu from "./CategoryMenu";
 import SearchResultsMenu from "./SearchResultsMenu";
@@ -15,7 +15,11 @@ export default function Header() {
   const navigate = useNavigate();
   const location = useLocation();
   const { totalItems, items } = useCart();
-  const { count: wishlistCount } = useWishlist();
+  const { count: wishlistCount , refresh } = useWishlist();
+    console.log('🛒 Header rendering - totalItems:', totalItems, 'items:', items);
+  useEffect(() => { 
+    refresh();
+  }, [refresh]);
 
   const [scrolled, setScrolled] = useState(false);
   const [mode, setMode] = useState("none"); // none | categories | search

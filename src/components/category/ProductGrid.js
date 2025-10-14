@@ -1,11 +1,10 @@
 import { useState } from "react";
 import { Link } from "react-router-dom";
-import { addToWishlistService, removeFromWishlistService , applyTokenFromStorage} from "../../services/AuthService";
-
+import { useWishlist } from "../../hooks/useWishlist";
+import { toast } from "react-toastify";   
 const ProductGrid = ({ products = [] }) => {
   const [selectedColors, setSelectedColors] = useState({});
-  const [wishlisted, setWishlisted] = useState({});
-  const [loading, setLoading] = useState({});
+  const { wishlist, add, remove, loading } = useWishlist();
 
   const handleColorClick = (productId, colorIndex) => {
     setSelectedColors((prev) => ({
@@ -13,23 +12,22 @@ const ProductGrid = ({ products = [] }) => {
       [productId]: colorIndex,
     }));
   };
-  applyTokenFromStorage();
+
+  const isWishlisted = (productId) =>
+    wishlist.some((item) => item._id === productId);
+
   const handleWishlist = async (e, product) => {
     e.preventDefault();
     e.stopPropagation();
-    setLoading((prev) => ({ ...prev, [product._id]: true }));
-    try {
-      if (wishlisted[product._id]) {
-        await removeFromWishlistService({ productId: product._id });
-        setWishlisted((prev) => ({ ...prev, [product._id]: false }));
-      } else {
-        await addToWishlistService({ productId: product._id });
-        setWishlisted((prev) => ({ ...prev, [product._id]: true }));
-      }
-    } catch (err) {
-      // Xử lý lỗi nếu cần
-    } finally {
-      setLoading((prev) => ({ ...prev, [product._id]: false }));
+    const token = localStorage.getItem("auth_token");
+    if (!token) {
+      toast.warning("Vui lòng đăng nhập để sử dụng tính năng này.");
+      return;
+    }
+    if (isWishlisted(product._id)) {
+      await remove(product._id);
+    } else {
+      await add(product._id);
     }
   };
 
@@ -105,10 +103,10 @@ const ProductGrid = ({ products = [] }) => {
               <button
                 className="absolute top-3 right-3 z-10 text-red-500 hover:scale-110 transition"
                 onClick={(e) => handleWishlist(e, product)}
-                aria-label={wishlisted[product._id] ? "Bỏ khỏi yêu thích" : "Thêm vào yêu thích"}
-                disabled={loading[product._id]}
+                aria-label={isWishlisted(product._id) ? "Bỏ khỏi yêu thích" : "Thêm vào yêu thích"}
+                disabled={loading}
               >
-                {wishlisted[product._id] ? (
+                {isWishlisted(product._id) ? (
                   // Solid heart
                   <svg xmlns="http://www.w3.org/2000/svg" fill="currentColor" viewBox="0 0 20 20" className="w-6 h-6">
                     <path d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" />

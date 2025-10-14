@@ -12,15 +12,17 @@ export const setAuthToken = (token) => {
   if (token) {
     api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     localStorage.setItem(TOKEN_KEY, token);
+    console.log("SET TOKEN:", token);
   } else {
     delete api.defaults.headers.common["Authorization"];
     localStorage.removeItem(TOKEN_KEY);
+    console.log("REMOVE TOKEN");
   }
 };
 
 const persistAuth = (data) => {
   if (data?.token) {
-    setAuthToken(data.token); // chỉ gọi setAuthToken
+    setAuthToken(data.token); //   chỉ gọi setAuthToken
   }
   if (data?.user) {
     localStorage.setItem("user", JSON.stringify(data.user));
@@ -112,4 +114,5 @@ export const logoutService = () => {
   setAuthToken(null);
   sessionStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem("user");
+  console.log("LOGOUT CALLED");
 };

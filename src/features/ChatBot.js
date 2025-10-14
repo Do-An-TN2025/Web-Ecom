@@ -187,7 +187,7 @@ export default function ChatBot({ hiddenOnAdmin }) {
       <button
         ref={fabRef}
         onClick={handleFabClick}
-        className="fixed bottom-5 right-5 z-[999] rounded-full bg-yellow-500 hover:bg-yellow-600 text-white w-20 h-20 shadow-lg flex items-center justify-center text-sm font-semibold"
+        className="fixed bottom-5 right-5 z-[999] rounded-full bg-yellow-500 hover:bg-yellow-600 text-white w-16   h-16 shadow-lg flex items-center justify-center text-sm font-semibold"
         aria-label="Chat tìm sản phẩm"
       >
         {open ? "×" : "CHATBOT"}

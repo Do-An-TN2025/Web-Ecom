@@ -10,6 +10,8 @@ import AdminProducts from '../Pages/admin/AdminProduct';
 import AdminCategories from '../Pages/admin/AdminCategories/AdminCategories';
 import Cart from '../components/Cart/Cart';
 import Profile from '../Pages/Profile';
+import WishlistPage from '../Pages/WishlistPage';
+import CheckoutPayment from '../Pages/CheckoutPayment';
 const AppRoutes = () => {
   return (
     <Routes>
@@ -19,6 +21,8 @@ const AppRoutes = () => {
       <Route path="/account/login" element={<Auth />} />
       <Route path="/account/profile" element={<Profile />} />
       <Route path="/cart" element={<Cart />} />
+       <Route path="/wishlist" element={<WishlistPage />} />
+       <Route path="/checkout" element={<CheckoutPayment />} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/products" element={<AdminProducts />} />
       <Route path="/admin/categories" element={<AdminCategories />} />

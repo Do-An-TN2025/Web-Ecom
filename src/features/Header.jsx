@@ -1,7 +1,10 @@
 import { useEffect, useState, useRef } from "react";
 import InputSearch from "../components/InputSearch";
 
+import { useWishlist } from "../../contexts/WishlistContext";
+
 export default function Header() {
+  const { count } = useWishlist();
   const [search, setSearch] = useState("");
   const [scrolled, setScrolled] = useState(false);
   const [showCategoryMenu, setShowCategoryMenu] = useState(false);
@@ -95,6 +98,28 @@ export default function Header() {
               </div>
             )}
           </div>
+
+          <a href="/wishlist" aria-label="Wishlist" className="relative">
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              fill="none"
+              viewBox="0 0 24 24"
+              strokeWidth="1.5"
+              stroke="currentColor"
+              className="w-8 h-8 text-rose-500 hover:text-rose-600 transition-colors duration-200"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                d="M12 21l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41 0.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.18L12 21z"
+              />
+            </svg>
+            {count > 0 && (
+              <span className="absolute -top-1 -right-1 rounded-full bg-rose-500 px-1.5 text-[10px] font-semibold text-white">
+                {count > 99 ? "99+" : count}
+              </span>
+            )}
+          </a>
 
           <a href="/cart" aria-label="Cart" className="relative">
             <svg

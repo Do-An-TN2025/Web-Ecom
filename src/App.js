@@ -5,6 +5,7 @@ import AppRoutes from "./Routes";
 import Header from "./features/Header/Header";
 import Loading from "./components/Loading";
 import ChatBot from "./features/ChatBot";
+import { WishlistProvider } from "./hooks/useWishlist";
 
 function AppContent() {
   const [isLoading, setIsLoading] = useState(true);

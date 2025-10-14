@@ -7,6 +7,7 @@ import 'react-toastify/dist/ReactToastify.css';
 import { CartProvider } from './contexts/CartContext';
 import { CartToastProvider } from "./hooks/CartAddNotifier";
 import { BrowserRouter } from "react-router-dom";
+import { WishlistProvider } from './hooks/useWishlist';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(
@@ -14,8 +15,10 @@ root.render(
     <BrowserRouter>
       <CartProvider>
         <CartToastProvider>
+            <WishlistProvider>
           <App />
           <ToastContainer position="top-right" autoClose={1500} newestOnTop />
+          </WishlistProvider>
         </CartToastProvider>
       </CartProvider>
     </BrowserRouter>
