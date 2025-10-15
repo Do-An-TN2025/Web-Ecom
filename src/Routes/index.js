@@ -12,6 +12,7 @@ import Cart from '../components/Cart/Cart';
 import Profile from '../Pages/Profile';
 import WishlistPage from '../Pages/WishlistPage';
 import CheckoutPayment from '../Pages/CheckoutPayment';
+import Voucher from '../components/Admin/Voucher/Voucher';
 const AppRoutes = () => {
   return (
     <Routes>
@@ -26,6 +27,7 @@ const AppRoutes = () => {
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/products" element={<AdminProducts />} />
       <Route path="/admin/categories" element={<AdminCategories />} />
+      <Route path="/admin/vouchers" element={<Voucher />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );
