@@ -21,6 +21,9 @@ const paymentOptions = [
 
 const formatCurrency = (v = 0) => (Number(v) || 0).toLocaleString("vi-VN", { minimumFractionDigits: 0 }) + "đ";
 
+// read API base from env (remove trailing slash)
+const API_URL = (process.env.REACT_APP_API_URL || "http://localhost:8686/api").replace(/\/$/, "");
+
 export default function CheckoutPage() {
   const { items, clearCart } = useCart();
   const navigate = useNavigate();
@@ -104,35 +107,58 @@ export default function CheckoutPage() {
     setIsPlacing(false);
   };
 
+  // try both possible backend endpoints (check-payment or payment-status)
   const checkPaymentOnce = async (orderCode) => {
     if (!orderCode) return null;
-    try {
-      const res = await fetch(`http://localhost:8686/api/orders/payment-status/${orderCode}`);
-      if (!res.ok) throw new Error("Không lấy được trạng thái");
-      const data = await res.json();
-      return data;
-    } catch (err) {
-      console.error("checkPaymentOnce error", err);
-      return null;
+    const endpoints = [
+      `${API_URL}/orders/check-payment/${orderCode}`,
+      `${API_URL}/orders/payment-status/${orderCode}`,
+    ];
+    for (const url of endpoints) {
+      try {
+        const res = await fetch(url);
+        if (!res.ok) continue;
+        const data = await res.json();
+        // normalize returned status fields if necessary
+        return data;
+      } catch (err) {
+        // try next
+        console.error("checkPaymentOnce error for", url, err);
+      }
     }
+    return null;
   };
 
   const startQrPolling = (orderCode, intervalMs = 5000, timeoutMs = 120000) => {
     if (!orderCode) return;
-    clearInterval(qrPollRef.current);
+    if (qrPollRef.current) {
+      clearInterval(qrPollRef.current);
+      qrPollRef.current = null;
+    }
     setQrPolling(true);
     const startedAt = Date.now();
     qrPollRef.current = setInterval(async () => {
       try {
         const s = await checkPaymentOnce(orderCode);
-        if (s && (s.paymentStatus === "paid" || s.paymentStatus === "PAID")) {
+        // support different response shapes: check s.paymentStatus, s.order?.payment?.status, s.payment?.status
+        const status =
+          s?.paymentStatus ||
+          s?.order?.paymentMethod?.status ||
+          s?.payment?.status ||
+          s?.order?.payment?.status ||
+          s?.orderStatus;
+        if (status && String(status).toLowerCase() === "paid") {
           clearInterval(qrPollRef.current);
           qrPollRef.current = null;
           setQrPolling(false);
           setShowQRModal(false);
           // finalize: clear cart, save last order and show success
-          try { localStorage.setItem("lastOrderCode", orderCode); } catch (e) {}
-          try { localStorage.setItem("lastOrder", JSON.stringify(s)) } catch (e) {}
+          try {
+            localStorage.setItem("lastOrderCode", orderCode);
+          } catch (e) {}
+          try {
+            localStorage.setItem("lastOrder", JSON.stringify(s));
+          } catch (e) {}
           try {
             if (typeof clearCart === "function") clearCart();
             else localStorage.removeItem("cart");
@@ -141,7 +167,6 @@ export default function CheckoutPage() {
           setShowSuccess(true);
           setTimeout(() => setShowChoiceModal(true), 250);
         } else {
-          // timeout
           if (Date.now() - startedAt > timeoutMs) {
             clearInterval(qrPollRef.current);
             qrPollRef.current = null;
@@ -203,7 +228,7 @@ export default function CheckoutPage() {
       const headers = { "Content-Type": "application/json" };
       if (token) headers["Authorization"] = `Bearer ${token}`;
 
-      const res = await fetch("http://localhost:8686/api/orders/create-orders", {
+      const res = await fetch(`${API_URL}/orders/create-orders`, {
         method: "POST",
         headers,
         body: JSON.stringify(payload),
@@ -219,7 +244,7 @@ export default function CheckoutPage() {
 
       const data = await res.json();
       const checkoutUrl = data?.payment?.checkoutUrl || data?.paymentLink || data?.paymentUrl;
-      const qrCode = data?.payment?.qrCode || null;
+      const qrCode = data?.payment?.qrCode || data?.payment?.qr || data?.payment?.qrPayload || null;
       const order = data?.order || null;
       const orderCode = order?.orderCode || data?.orderCode || null;
 
@@ -228,7 +253,7 @@ export default function CheckoutPage() {
         try { localStorage.setItem("lastOrder", JSON.stringify(order || data)) } catch (e) {}
       }
 
-      // If payment provider returns a checkoutUrl -> redirect (usual PayOS web flow)
+      // If payment provider returns a checkoutUrl -> redirect (PayOS web flow)
       if (checkoutUrl && !qrCode) {
         await finishLoading();
         window.location.assign(checkoutUrl);
@@ -237,10 +262,8 @@ export default function CheckoutPage() {
 
       // If provider returned a QR payload -> render QR on frontend and let user scan
       if (qrCode) {
-        // qrCode might be an EMV payload string (not an image URL). We'll render via external QR image service.
         setQrPayload(qrCode);
         setShowQRModal(true);
-        // optionally start polling status automatically
         if (orderCode) startQrPolling(orderCode);
         await finishLoading();
         return;
@@ -269,16 +292,21 @@ export default function CheckoutPage() {
 
   const handleManualCheck = async () => {
     const code = successOrder?.orderCode || localStorage.getItem("lastOrderCode");
-    const codeToCheck = code || ( (successOrder && successOrder.orderCode) ? successOrder.orderCode : null );
+    const codeToCheck = code || (successOrder && successOrder.orderCode ? successOrder.orderCode : null);
     if (!codeToCheck) {
       alert("Không có mã đơn để kiểm tra");
       return;
     }
-    setIsPlacing(true); // reuse spinner while checking
+    startLoading();
     try {
       const s = await checkPaymentOnce(codeToCheck);
-      if (s && (s.paymentStatus === "paid" || s.paymentStatus === "PAID")) {
-        // paid -> finalize
+      const status =
+        s?.paymentStatus ||
+        s?.order?.paymentMethod?.status ||
+        s?.payment?.status ||
+        s?.order?.payment?.status ||
+        s?.orderStatus;
+      if (status && String(status).toLowerCase() === "paid") {
         try { localStorage.setItem("lastOrder", JSON.stringify(s)) } catch (e) {}
         try {
           if (typeof clearCart === "function") clearCart();
@@ -301,7 +329,7 @@ export default function CheckoutPage() {
 
   const handleViewOrder = () => {
     const code = successOrder?.orderCode || successOrder?.order?.orderCode || localStorage.getItem("lastOrderCode");
-    if (code) navigate(`/orders`);
+    if (code) navigate(`/orders/${code}`);
     else navigate("/orders");
   };
 
