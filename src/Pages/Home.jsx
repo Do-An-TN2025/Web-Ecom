@@ -9,7 +9,7 @@ export default function Home() {
     <div>
       {isHomePage && <Hero />}
       <div className="h-[2000px] bg-gray-100">
-        <p className="p-6">Chưa có nd </p>
+        <p className="p-6">Chưa có nd1</p>
       </div>
     </div>
   );
