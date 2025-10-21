@@ -75,6 +75,7 @@ export default function Cart() {
         (it.product && it.product.thumbnail) ||
         "/placeholder.jpg";
       const name = it.name || it.product?.name || it.product?.title || "";
+      console.log("names", name);
       const color = it.color || it.variant?.color || "";
       const size = it.size || it.variant?.sizeInfo?.size || "";
       return {

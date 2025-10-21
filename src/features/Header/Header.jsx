@@ -16,7 +16,6 @@ export default function Header() {
   const location = useLocation();
   const { totalItems, items } = useCart();
   const { count: wishlistCount , refresh } = useWishlist();
-    console.log('🛒 Header rendering - totalItems:', totalItems, 'items:', items);
   useEffect(() => { 
     refresh();
   }, [refresh]);

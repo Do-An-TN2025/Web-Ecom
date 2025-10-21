@@ -12,11 +12,9 @@ export const setAuthToken = (token) => {
   if (token) {
     api.defaults.headers.common["Authorization"] = `Bearer ${token}`;
     localStorage.setItem(TOKEN_KEY, token);
-    console.log("SET TOKEN:", token);
   } else {
     delete api.defaults.headers.common["Authorization"];
     localStorage.removeItem(TOKEN_KEY);
-    console.log("REMOVE TOKEN");
   }
 };
 
@@ -114,5 +112,6 @@ export const logoutService = () => {
   setAuthToken(null);
   sessionStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem("user");
+  localStorage.removeItem("checkout_shipping_v1");
   console.log("LOGOUT CALLED");
 };

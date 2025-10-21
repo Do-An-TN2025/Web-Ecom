@@ -23,7 +23,7 @@ const ShippingForm = React.forwardRef(function ShippingForm({ onChange }, ref) {
   const [addressLine1, setAddressLine1] = useState(saved.addressLine1 || "");
   const [note, setNote] = useState(saved.note || "");
 
-  const [savedAddresses, setSavedAddresses] = useState(saved.addresses || []);
+  const [savedAddresses, setSavedAddresses] = useState(Array.isArray(saved.addresses) ? saved.addresses : []);
   const [selectedAddressId, setSelectedAddressId] = useState(saved.selectedAddressId || "");
   const [addressesOpen, setAddressesOpen] = useState(false);
 
@@ -33,6 +33,7 @@ const ShippingForm = React.forwardRef(function ShippingForm({ onChange }, ref) {
   const addressRef = useRef(null);
   const containerRef = useRef(null);
 
+  // persist local draft
   useEffect(() => {
     try {
       localStorage.setItem(
@@ -42,6 +43,7 @@ const ShippingForm = React.forwardRef(function ShippingForm({ onChange }, ref) {
     } catch {}
   }, [fullName, email, phone, addressLine1, note, savedAddresses, selectedAddressId]);
 
+  // notify parent
   useEffect(() => {
     onChange?.({ fullName, email, phone, addressLine1, note, savedAddresses, selectedAddressId });
   }, [fullName, email, phone, addressLine1, note, savedAddresses, selectedAddressId, onChange]);
@@ -57,25 +59,6 @@ const ShippingForm = React.forwardRef(function ShippingForm({ onChange }, ref) {
     return () => document.removeEventListener("click", onDoc);
   }, [addressesOpen]);
 
-  // when user selects an address from savedAddresses, populate fields
-  useEffect(() => {
-    if (!selectedAddressId) return;
-    const addr = savedAddresses.find((a) => (a._id || a.id) === selectedAddressId);
-    if (!addr) return;
-    const receiver = addr.receiverName || addr.name || addr.fullName || "";
-    const phoneFromAddr = addr.phone || addr.phoneNumber || "";
-    const addrLine =
-      addr.addressLine ||
-      addr.addressLine1 ||
-      [addr.street, addr.ward, addr.district, addr.city].filter(Boolean).join(", ") ||
-      "";
-
-    if (receiver) setFullName(receiver);
-    if (phoneFromAddr) setPhone(phoneFromAddr);
-    if (addrLine) setAddressLine1(addrLine);
-  }, [selectedAddressId, savedAddresses]);
-
-  // try to prefill from /users/me (if token present)
   useEffect(() => {
     let mounted = true;
     (async () => {
@@ -100,22 +83,13 @@ const ShippingForm = React.forwardRef(function ShippingForm({ onChange }, ref) {
           setSavedAddresses(addrList);
           const def = addrList.find((a) => a.isDefault) || addrList[0];
           const defId = def._id || def.id || "";
-          setSelectedAddressId(defId);
-
-          const receiver = def.receiverName || def.name || def.fullName || "";
-          const phoneFromAddr = def.phone || def.phoneNumber || "";
-          const addrLine =
-            def.addressLine ||
-            def.addressLine1 ||
-            [def.street, def.ward, def.district, def.city].filter(Boolean).join(", ") ||
-            "";
-
-          if (!fullName && receiver) setFullName(receiver);
-          if (!phone && phoneFromAddr) setPhone(phoneFromAddr);
-          if (!addressLine1 && addrLine) setAddressLine1(addrLine);
+          // set selection via helper so we populate fields once
+          if (!selectedAddressId) {
+            handleSelectAddress(def, defId);
+          }
         }
       } catch (err) {
-        console.debug("prefill getMe failed:", err);
+        // silent
       }
     })();
     return () => {
@@ -124,12 +98,31 @@ const ShippingForm = React.forwardRef(function ShippingForm({ onChange }, ref) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // run once
 
+  // helper to format address text
   const formatAddr = (a) =>
-    a
-      ? [a.addressLine || a.addressLine1, a.ward, a.district, a.city].filter(Boolean).join(", ")
-      : "";
+    a ? [a.addressLine || a.addressLine1, a.ward, a.district, a.city].filter(Boolean).join(", ") : "";
 
-  // validation helper to be called by parent
+  // select an address (explicit handler to avoid overwriting while user types)
+  const handleSelectAddress = (addr, id = null) => {
+    if (!addr) return;
+    const receiver = addr.receiverName || addr.name || addr.fullName || "";
+    const phoneFromAddr = addr.phone || addr.phoneNumber || "";
+    const addrLine =
+      addr.addressLine ||
+      addr.addressLine1 ||
+      [addr.street, addr.ward, addr.district, addr.city].filter(Boolean).join(", ") ||
+      "";
+
+    if (receiver) setFullName(receiver);
+    if (phoneFromAddr) setPhone(phoneFromAddr);
+    if (addrLine) setAddressLine1(addrLine);
+    setSelectedAddressId(id || (addr._id || addr.id || ""));
+    setAddressesOpen(false);
+    // keep focus in the address input so user can continue editing if desired
+    setTimeout(() => addressRef.current?.focus(), 0);
+  };
+
+  // validation helper
   const validateAndGet = () => {
     if (!fullName?.trim()) {
       nameRef.current?.focus();
@@ -144,7 +137,6 @@ const ShippingForm = React.forwardRef(function ShippingForm({ onChange }, ref) {
     const finalAddress = (addressLine1 && addressLine1.trim()) || (selectedAddr && formatAddr(selectedAddr)) || "";
 
     if (!finalAddress) {
-      // focus the manual input if it exists, otherwise focus phone
       addressRef.current?.focus();
       return { valid: false };
     }
@@ -234,52 +226,62 @@ const ShippingForm = React.forwardRef(function ShippingForm({ onChange }, ref) {
           />
         </label>
 
-        {/* single shipping address view + change button */}
         <div className="flex flex-col">
           <span className="text-xs text-gray-500 mb-1">Địa chỉ giao hàng</span>
 
-          {/* show selected saved address if exists, otherwise input */}
-          {selectedAddr ? (
-            <div className="flex items-start gap-3">
-              <div className="flex-1 p-3 rounded-lg border border-gray-100 bg-white">
-                <div className="flex justify-between">
-                  <div>
-                    <div className="text-sm font-medium text-gray-800">{selectedAddr.receiverName || selectedAddr.name}</div>
-                    <div className="text-xs text-gray-500 mt-1">{selectedAddr.phone}</div>
-                    <div className="text-xs text-gray-500 mt-2">
-                      {formatAddr(selectedAddr)}
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    {selectedAddr.isDefault && <div className="text-xs text-yellow-600 font-medium">Mặc định</div>}
-                  </div>
+          {/* show selected saved address summary (non-destructive) */}
+          {selectedAddr && (
+            <div className="mb-2 p-2 rounded-lg border border-gray-100 bg-white text-sm text-gray-700">
+              <div className="flex justify-between items-start">
+                <div>
+                  <div className="font-medium">{selectedAddr.receiverName || selectedAddr.name}</div>
+                  <div className="text-xs text-gray-500">{selectedAddr.phone}</div>
+                  <div className="text-xs text-gray-500 mt-1">{formatAddr(selectedAddr)}</div>
+                </div>
+                <div className="text-right">
+                  {selectedAddr.isDefault && <div className="text-xs text-yellow-600 font-medium">Mặc định</div>}
                 </div>
               </div>
-
-              <div className="flex-none">
-                <button
-                  type="button"
-                  onClick={() => setAddressesOpen((s) => !s)}
-                  className="px-3 py-2 border rounded-lg text-sm text-gray-700 hover:bg-gray-50 white-space-nowrap"
-                >
-                  Thay đổi
-                </button>
-              </div>
             </div>
-          ) : (
-            <input
+          )}
+
+          {/* always render editable input to avoid remount/focus loss */}
+          <div className="flex items-center gap-3">
+           <input
               ref={addressRef}
               value={addressLine1}
               onChange={(e) => {
                 setAddressLine1(e.target.value);
                 if (selectedAddressId) setSelectedAddressId("");
               }}
+              // prevent global "/" hotkey from stealing focus — capture phase to intercept earlier
+              onKeyDownCapture={(e) => {
+                if (e.key === "/") {
+                  e.stopPropagation();
+                  // do not preventDefault so "/" is still typed into the input
+                }
+              }}
+              onKeyPressCapture={(e) => {
+                if (e.key === "/") e.stopPropagation();
+              }}
+              onKeyUpCapture={(e) => {
+                if (e.key === "/") e.stopPropagation();
+                  }}
+              onFocus={() => { try { window.__disableGlobalSearchHotkey = true; } catch {} }}
+              onBlur={() => { try { window.__disableGlobalSearchHotkey = false; } catch {} }}
               placeholder="Số nhà, tên đường, phường, quận, tỉnh/thành"
-              className="border rounded-lg px-3 py-2 focus:ring-2 focus:ring-yellow-200 outline-none"
+              className="flex-1 border rounded-lg px-3 py-2 focus:ring-2 focus:ring-yellow-200 outline-none"
             />
-          )}
 
-          {/* expanded selector: choose one address, only visible when user wants to change */}
+            <button
+              type="button"
+              onClick={() => setAddressesOpen((s) => !s)}
+              className="px-3 py-2 border rounded-lg text-sm text-gray-700 hover:bg-gray-50 whitespace-nowrap"
+            >
+              Thay đổi
+            </button>
+          </div>
+
           {addressesOpen && (
             <div className="mt-3 p-3 rounded-lg border border-gray-100 bg-white shadow-sm max-h-56 overflow-auto">
               {savedAddresses && savedAddresses.length > 0 ? (
@@ -290,10 +292,7 @@ const ShippingForm = React.forwardRef(function ShippingForm({ onChange }, ref) {
                     <div
                       key={id}
                       role="button"
-                      onClick={() => {
-                        setSelectedAddressId(id);
-                        setAddressesOpen(false);
-                      }}
+                      onClick={() => handleSelectAddress(a, id)}
                       className={
                         "p-3 mb-2 rounded-md cursor-pointer " +
                         (sel ? "border-2 border-yellow-400 bg-yellow-50" : "border border-gray-100 bg-white")
@@ -303,13 +302,9 @@ const ShippingForm = React.forwardRef(function ShippingForm({ onChange }, ref) {
                         <div>
                           <div className="text-sm font-medium text-gray-800">{a.receiverName || a.name}</div>
                           <div className="text-xs text-gray-500">{a.phone}</div>
-                          <div className="text-xs text-gray-500 mt-1">
-                            {formatAddr(a)}
-                          </div>
+                          <div className="text-xs text-gray-500 mt-1">{formatAddr(a)}</div>
                         </div>
-                        <div className="text-right">
-                          {a.isDefault && <div className="text-xs text-yellow-600 font-medium">Mặc định</div>}
-                        </div>
+                        <div className="text-right">{a.isDefault && <div className="text-xs text-yellow-600 font-medium">Mặc định</div>}</div>
                       </div>
                     </div>
                   );
