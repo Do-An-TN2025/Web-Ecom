@@ -14,6 +14,7 @@ import WishlistPage from '../Pages/WishlistPage';
 import CheckoutPayment from '../Pages/CheckoutPayment';
 import Voucher from '../components/Admin/Voucher/Voucher';
 import Order from '../Pages/Order';
+import OrdersAdmin from '../Pages/admin/OrdersAdmin';
 const AppRoutes = () => {
   return (
     <Routes>
@@ -30,6 +31,7 @@ const AppRoutes = () => {
       <Route path="/admin/products" element={<AdminProducts />} />
       <Route path="/admin/categories" element={<AdminCategories />} />
       <Route path="/admin/vouchers" element={<Voucher />} />
+      <Route path="/admin/orders" element={<OrdersAdmin />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

@@ -83,10 +83,26 @@ export default function CheckoutPage() {
 
   const getAuthToken = () => {
     try {
-      return localStorage.getItem("token") || null;
+      return localStorage.getItem("auth_token") || localStorage.getItem("token") || null;
     } catch (e) {
       return null;
     }
+  };
+
+  // guest token utils (server returns guestToken for guest orders)
+  const getGuestTokenFor = (orderCode) => {
+    try {
+      if (!orderCode) return null;
+      return localStorage.getItem(`guestToken_${orderCode}`) || null;
+    } catch (e) {
+      return null;
+    }
+  };
+  const saveGuestTokenFor = (orderCode, token) => {
+    try {
+      if (!orderCode || !token) return;
+      localStorage.setItem(`guestToken_${orderCode}`, token);
+    } catch (e) {}
   };
 
   const normalizePaymentType = (type) => {
@@ -107,22 +123,23 @@ export default function CheckoutPage() {
     setIsPlacing(false);
   };
 
-  // try both possible backend endpoints (check-payment or payment-status)
   const checkPaymentOnce = async (orderCode) => {
     if (!orderCode) return null;
     const endpoints = [
       `${API_URL}/orders/check-payment/${orderCode}`,
       `${API_URL}/orders/payment-status/${orderCode}`,
     ];
+
+    const guestToken = getGuestTokenFor(orderCode);
+    const headers = guestToken ? { "x-guest-token": guestToken } : {};
+
     for (const url of endpoints) {
       try {
-        const res = await fetch(url);
+        const res = await fetch(url, { headers });
         if (!res.ok) continue;
         const data = await res.json();
-        // normalize returned status fields if necessary
         return data;
       } catch (err) {
-        // try next
         console.error("checkPaymentOnce error for", url, err);
       }
     }
@@ -221,6 +238,7 @@ export default function CheckoutPage() {
       totalAmount: grandTotal,
       customerNote: ship.note || "",
       voucherCode: voucherCode || null,
+      // guestInfo only for guests; backend should derive userId from token (req.user)
       ...(isLoggedIn ? {} : { guestInfo: { fullName: ship.fullName, phone: ship.phone, email: ship.email || null } }),
     };
 
@@ -243,6 +261,10 @@ export default function CheckoutPage() {
       }
 
       const data = await res.json();
+
+      // save guestToken returned by backend (for guest flow)
+      const guestToken = data?.guestToken || data?.guest_token || null;
+
       const checkoutUrl = data?.payment?.checkoutUrl || data?.paymentLink || data?.paymentUrl;
       const qrCode = data?.payment?.qrCode || data?.payment?.qr || data?.payment?.qrPayload || null;
       const order = data?.order || null;
@@ -251,6 +273,7 @@ export default function CheckoutPage() {
       if (orderCode) {
         try { localStorage.setItem("lastOrderCode", orderCode); } catch (e) {}
         try { localStorage.setItem("lastOrder", JSON.stringify(order || data)) } catch (e) {}
+        try { if (guestToken) saveGuestTokenFor(orderCode, guestToken); } catch (e) {}
       }
 
       // If payment provider returns a checkoutUrl -> redirect (PayOS web flow)

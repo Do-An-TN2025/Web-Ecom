@@ -1,314 +1,211 @@
-import React, { useEffect, useRef, useState } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import OrdersList from "../components/Order/OrdersList";
+import orderService from "../services/orderService";
 
-function OrderPlacedModal({ orderObj, onClose, onViewDetail, autoCloseMs = 10000 }) {
-  const modalRef = useRef(null);
-  const closeRef = useRef(null);
-  const timerRef = useRef(null);
-  const pausedRef = useRef(false);
-
-const formatShippingAddress = (a) => {
-  if (!a) return "";
-  const parts = [
-    a.addressLine1 || a.addressLine || a.address || "",
-    a.ward || "",
-    a.district || "",
-    a.city || "",
-  ].map((s) => (s || "").trim()).filter(Boolean);
-  return parts.join(", ");
-};
-
-  useEffect(() => {
-    const prev = document.body.style.overflow;
-    document.body.style.overflow = "hidden";
-    return () => {
-      document.body.style.overflow = prev;
-    };
-  }, []);
-
-  useEffect(() => {
-    const prevActive = document.activeElement;
-    closeRef.current?.focus();
-
-    startTimer();
-
-    return () => {
-      clearTimer();
-      try { prevActive?.focus?.(); } catch {}
-    };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  const clearTimer = () => {
-    if (timerRef.current) {
-      clearTimeout(timerRef.current);
-      timerRef.current = null;
-    }
-  };
-
-  const startTimer = () => {
-    clearTimer();
-    timerRef.current = setTimeout(() => {
-      if (!pausedRef.current) onClose();
-    }, autoCloseMs);
-  };
-
-  // pause/resume helpers (hover or focus inside)
-  const handleMouseEnter = () => {
-    pausedRef.current = true;
-    clearTimer();
-  };
-  const handleMouseLeave = () => {
-    pausedRef.current = false;
-    startTimer();
-  };
-
-  // keyboard handlers: Escape to close, Tab focus trap
-  const onKeyDown = (e) => {
-    if (e.key === "Escape") {
-      e.stopPropagation();
-      onClose();
-      return;
-    }
-    if (e.key === "Tab") {
-      // simple focus trap
-      const focusable = modalRef.current?.querySelectorAll(
-        'a[href], button:not([disabled]), textarea, input, select, [tabindex]:not([tabindex="-1"])'
-      );
-      if (!focusable || focusable.length === 0) return;
-      const first = focusable[0];
-      const last = focusable[focusable.length - 1];
-      if (e.shiftKey && document.activeElement === first) {
-        e.preventDefault();
-        last.focus();
-      } else if (!e.shiftKey && document.activeElement === last) {
-        e.preventDefault();
-        first.focus();
-      }
-    }
-  };
-
-  const items = Array.isArray(orderObj?.items) ? orderObj.items : [];
-
+function OrderSuccessCard({ order, onClose, onView }) {
+  if (!order) return null;
+  const pay = order.payment || order.paymentMethod || {};
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center p-4"
-      role="dialog"
-      aria-modal="true"
-      onKeyDown={onKeyDown}
-    >
-      {/* backdrop */}
-      <div
-        className="absolute inset-0 bg-black/50"
-        onClick={onClose}
-        aria-hidden="true"
-      />
-
-      <div
-        ref={modalRef}
-        onMouseEnter={handleMouseEnter}
-        onMouseLeave={handleMouseLeave}
-        className="relative w-full max-w-4xl bg-white rounded-lg shadow-2xl overflow-hidden transform transition-all duration-200"
-        style={{ animation: "modalEnter .18s ease-out" }}
-      >
-        {/* header */}
-        <div className="flex items-center justify-between px-5 py-4 border-b">
-          <div>
-            <h3 className="text-lg font-semibold">Đặt hàng thành công</h3>
-            <div className="text-sm text-gray-600 mt-1">
-              Mã đơn: <strong className="text-gray-800">{orderObj?.orderCode}</strong>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <button
-              ref={closeRef}
-              onClick={onClose}
-              aria-label="Đóng"
-              className="p-2 rounded hover:bg-gray-100 text-gray-600"
-            >
-              ✕
-            </button>
-          </div>
+    <div className="p-6 bg-white rounded-lg shadow">
+      <div className="flex items-start gap-4">
+        <div className="w-14 h-14 flex items-center justify-center bg-green-50 rounded-full">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none">
+            <path d="M7 12l3 3 7-7" stroke="#059669" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+          </svg>
         </div>
 
-        {/* body */}
-        <div className="p-5 max-h-[65vh] overflow-auto">
-          <div className="flex gap-6">
-        
-            {/* main details */}
-            <div className="flex-1">
-              <div className="mb-3 text-sm text-gray-700">
-                Trạng thái: <strong>{orderObj?.orderStatus ?? "pending"}</strong>
-                {" · "}
-                Phương thức: <strong>{orderObj?.paymentMethod?.type ?? "COD"}</strong>
-              </div>
+        <div className="flex-1">
+          <h3 className="text-lg font-semibold">Đặt hàng thành công</h3>
+          <p className="text-sm text-gray-600 mt-1">
+            Mã đơn: <strong className="text-gray-800">{order.orderCode}</strong>
+          </p>
 
-              <div className="mb-4">
-                <div className="text-sm font-medium mb-3">Sản phẩm</div>
-                <div className="space-y-3">
-                  {items.length === 0 && <div className="text-sm text-gray-500">Không có sản phẩm hiển thị</div>}
-                  {items.map((it, idx) => {
-                    const qty = it.quantity ?? it.qty ?? 1;
-                    const price = it.price ?? it.unitPrice ?? 0;
-                    const name = it.name ?? it.productName ?? it.title ?? "Sản phẩm";
-                    return (
-                      <div key={idx} className="flex items-center justify-between">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={it.image || it.product?.image || "/placeholder.jpg"}
-                            alt={name}
-                            className="w-12 h-12 object-cover rounded"
-                          />
-                          <div>
-                            <div className="text-sm font-medium">{name}</div>
-                            <div className="text-xs text-gray-500">Size: {it.size || "-"} · Số lượng: {qty}</div>
-                          </div>
-                        </div>
-                        <div className="text-right text-sm">
-                          <div className="font-medium">{(price || 0).toLocaleString("vi-VN") + "đ"}</div>
-                          <div className="text-xs text-gray-400">Tạm: {((price || 0) * qty).toLocaleString("vi-VN") + "đ"}</div>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              </div>
-
-              <div className="border-t pt-3">
-                <div className="flex justify-between text-sm mb-1">
-                  <div>Tạm tính</div>
-                  <div className="font-medium">{(orderObj?.subtotal ?? 0).toLocaleString("vi-VN") + "đ"}</div>
-                </div>
-                <div className="flex justify-between text-sm mb-1">
-                  <div>Giảm</div>
-                  <div className="text-green-600 font-medium">-{(orderObj?.discount ?? orderObj?.voucher?.discountAmount ?? 0).toLocaleString("vi-VN") + "đ"}</div>
-                </div>
-                <div className="flex justify-between text-sm mb-2">
-                  <div>Phí vận chuyển</div>
-                  <div>{(orderObj?.shippingFee ?? 0).toLocaleString("vi-VN") + "đ"}</div>
-                </div>
-                <div className="flex justify-between mt-2 text-lg font-semibold">
-                  <div>Tổng cộng</div>
-                  <div className="text-yellow-600">{(orderObj?.totalAmount ?? 0).toLocaleString("vi-VN") + "đ"}</div>
-                </div>
-              </div>
-
-               {orderObj?.shippingAddress && (
-                <div className="mt-4 text-sm">
-                  <div className="font-medium mb-1">Giao đến</div>
-                  <div className="text-gray-800">
-                    {orderObj.shippingAddress.fullName}
-                    {orderObj.shippingAddress.phone && <> · {orderObj.shippingAddress.phone}</>}
-                  </div>
-
-                  {/* show email if present */}
-                  {orderObj.shippingAddress.email && (
-                    <div className="text-gray-600 text-sm">{orderObj.shippingAddress.email}</div>
-                  )}
-
-                  {/* formatted full address */}
-                  <div className="text-gray-600 text-sm mt-1">
-                    {formatShippingAddress(orderObj.shippingAddress) || "Chưa có địa chỉ chi tiết"}
-                  </div>
-                </div>
-              )}
-            </div>
+          <div className="mt-3 text-sm text-gray-700">
+            <div>Tổng: {(order.totalAmount || order.total || 0).toLocaleString()}đ</div>
+            <div>Trạng thái: {(pay.status || order.orderStatus || "pending").toString()}</div>
+            <div>Người nhận: {order.shippingAddress?.fullName} · {order.shippingAddress?.phone}</div>
+            <div className="text-xs text-gray-400 mt-1">Nếu bạn muốn kiểm tra thanh toán, bấm "Xem đơn".</div>
           </div>
-        </div>
 
-        {/* footer */}
-        <div className="p-4 border-t flex items-center justify-between">
-          <div className="text-sm text-gray-600">Thông báo sẽ tự đóng sau {Math.round(autoCloseMs/1000)} giây</div>
-          <div className="flex items-center gap-2">
-            <button onClick={onClose} className="px-3 py-2 rounded border text-sm">Đóng</button>
-            <button onClick={onViewDetail} className="px-3 py-2 rounded bg-yellow-500 text-white">Xem chi tiết</button>
+          <div className="mt-4 flex gap-2">
+            <button onClick={() => onView(order.orderCode)} className="px-4 py-2 rounded border text-sm">Xem đơn</button>
+            { (pay.checkoutUrl || pay.invoiceUrl) && (
+              <button onClick={() => window.location.href = pay.checkoutUrl || pay.invoiceUrl} className="px-4 py-2 rounded bg-yellow-500 text-white text-sm">Mở trang thanh toán</button>
+            )}
+            <button onClick={onClose} className="px-4 py-2 rounded border text-sm">Đóng</button>
           </div>
         </div>
       </div>
+    </div>
+  );
+}
 
-      <style>{`
-        @keyframes modalEnter {
-          from { opacity: 0; transform: translateY(-8px) scale(.99); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
-        }
-      `}</style>
+function OrderSearch({ onResult }) {
+  const [q, setQ] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const doSearch = async (code) => {
+    const orderCode = (code || q || "").trim();
+    if (!orderCode) return alert("Nhập mã đơn");
+    setLoading(true);
+    try {
+      const data = await orderService.checkPaymentStatus(orderCode);
+      onResult(null, data);
+    } catch (err) {
+      onResult(err || new Error("Không tìm thấy đơn"), null);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mb-4 p-4 bg-white rounded shadow flex gap-2 items-center">
+      <input
+        value={q}
+        onChange={(e) => setQ(e.target.value)}
+        onKeyDown={(e) => e.key === "Enter" && doSearch()}
+        placeholder="Nhập mã đơn để tra cứu (ví dụ: 278807845)"
+        className="flex-1 border rounded px-3 py-2"
+      />
+      <button onClick={() => doSearch()} disabled={loading} className="px-4 py-2 rounded bg-yellow-500 text-white">
+        {loading ? "Đang..." : "Tra cứu"}
+      </button>
     </div>
   );
 }
 
 export default function Order() {
-  const loc = useLocation();
   const navigate = useNavigate();
+  const [lastOrder, setLastOrder] = useState(null);
+  const [lastOrderCode, setLastOrderCode] = useState(null);
+  const [searchResult, setSearchResult] = useState(null);
+  const [searchError, setSearchError] = useState(null);
+  const [orders, setOrders] = useState(null);
+  const [loadingOrders, setLoadingOrders] = useState(false);
 
-  const [placedOrder, setPlacedOrder] = useState(loc.state?.order || null);
-  const [justPlaced, setJustPlaced] = useState(!!loc.state?.justPlaced);
-  const [loading, setLoading] = useState(false);
+  const token = (() => { try { return localStorage.getItem("auth_token"); } catch { return null; } })();
+  const isLoggedIn = !!token;
 
   useEffect(() => {
-    if (!placedOrder) {
-      try {
-        const raw = localStorage.getItem("lastOrder");
-        const code = localStorage.getItem("lastOrderCode");
-        if (raw) {
-          setPlacedOrder(JSON.parse(raw));
-          setJustPlaced(true);
-        } else if (code) {
-          setLoading(true);
-          fetch(`/api/orders/check-payment/${code}`)
-            .then((r) => (r.ok ? r.json() : Promise.reject(r)))
-            .then((data) => {
-              setPlacedOrder({ ...data, orderCode: data.orderCode || code });
-              setJustPlaced(true);
-            })
-            .catch(() => {})
-            .finally(() => setLoading(false));
-        }
-      } catch (e) {}
+    try {
+      const raw = localStorage.getItem("lastOrder");
+      const code = localStorage.getItem("lastOrderCode");
+      if (raw) setLastOrder(JSON.parse(raw));
+      if (code) setLastOrderCode(code);
+    } catch (e) {
+      setLastOrder(null);
+      setLastOrderCode(null);
     }
 
-    // keep lastOrderCode for lookup but remove lastOrder payload to avoid repeated modals
-    try {
-      localStorage.removeItem("lastOrder");
-    } catch (e) {}
-  }, [placedOrder]);
+    let mounted = true;
+    const loadOrders = async () => {
+      if (!isLoggedIn) return;
+      setLoadingOrders(true);
+      try {
+        const data = await orderService.getMyOrders(token);
+        if (!mounted) return;
+        setOrders(Array.isArray(data) ? data : []);
+      } catch (err) {
+        setOrders([]);
+      } finally {
+        if (mounted) setLoadingOrders(false);
+      }
+    };
+    loadOrders();
+    return () => { mounted = false; };
+  }, [isLoggedIn, token]);
 
-  const orderObj = placedOrder?.order ? placedOrder.order : placedOrder || null;
-
-  const closeModal = () => {
-    setJustPlaced(false);
-    setPlacedOrder(null);
-    try {
-      localStorage.removeItem("lastOrder");
-      localStorage.removeItem("lastOrderCode");
-    } catch (e) {}
-    // keep user on /orders page, replace state so modal won't re-open
-    navigate("/orders", { replace: true, state: {} });
+  const handleSearchResult = (err, data) => {
+    if (err) {
+      setSearchError(err.message || "Không tìm thấy đơn");
+      setSearchResult(null);
+      return;
+    }
+    setSearchError(null);
+    setSearchResult(data);
   };
 
-  const viewDetail = () => {
-    const code = orderObj?.orderCode || placedOrder?.orderCode;
-    if (code) navigate(`/orders/${code}`);
-    else navigate("/orders");
+  const handleViewOrder = (code) => {
+    if (!code) return;
+    navigate(`/orders/${code}`);
+  };
+
+  const clearLastOrder = () => {
+    try { localStorage.removeItem("lastOrder"); localStorage.removeItem("lastOrderCode"); } catch (e) {}
+    setLastOrder(null);
+    setLastOrderCode(null);
   };
 
   return (
-    <div className="max-w-7xl mx-auto px-4 py-8">
-      {justPlaced && orderObj && (
-        <OrderPlacedModal
-          orderObj={orderObj}
-          onClose={closeModal}
-          onViewDetail={viewDetail}
-          autoCloseMs={5000}
-        />
+    <div className="px-4 py-8 max-w-7xl mx-auto">
+      <div className="mb-6 flex items-center justify-between">
+        <h1 className="text-2xl font-bold">Đơn hàng</h1>
+        <div>
+          <button onClick={() => navigate("/")} className="px-3 py-2 rounded border">Trang chủ</button>
+        </div>
+      </div>
+
+      {/* If the user just placed an order show success card */}
+      {lastOrder && (
+        <div className="mb-4">
+          <OrderSuccessCard order={lastOrder} onClose={clearLastOrder} onView={handleViewOrder} />
+        </div>
       )}
 
-      {loading && <div>Đang tải thông tin đơn...</div>}
+      {/* Search box: show for guests only (logged-in users see their list below) */}
+      {!isLoggedIn && <OrderSearch onResult={handleSearchResult} />}
 
-      <h1 className="text-2xl font-bold mb-4">Đơn hàng của bạn</h1>
-      <div>
-        <p className="text-sm text-gray-500">Danh sách đơn hàng sẽ hiển thị ở đây.</p>
-      </div>
+      {/* Search result */}
+      {searchError && <div className="mb-4 p-3 bg-red-50 text-red-700 rounded">{searchError}</div>}
+      {searchResult && (
+        <div className="mb-4 p-4 bg-white rounded shadow">
+          <div className="flex items-center justify-between">
+            <div>
+              <div className="text-sm text-gray-500">Mã đơn</div>
+              <div className="font-medium">{searchResult.orderCode}</div>
+              <div className="text-xs text-gray-500">Tổng: {(searchResult.totalAmount || 0).toLocaleString()}đ</div>
+            </div>
+            <div className="text-right">
+              <div className="text-sm text-gray-500">Trạng thái</div>
+              <div className="font-semibold">{(searchResult.paymentStatus || searchResult.orderStatus || "pending").toString()}</div>
+              <div className="mt-3 flex gap-2 justify-end">
+                <button onClick={() => handleViewOrder(searchResult.orderCode)} className="px-3 py-1 rounded border text-sm">Xem chi tiết</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Logged-in user's orders list */}
+      {isLoggedIn ? (
+        <>
+          <div className="mb-4">
+            <h2 className="text-lg font-semibold">Đơn hàng của tôi</h2>
+            {loadingOrders ? (
+              <div className="p-4 bg-white rounded shadow">Đang tải...</div>
+            ) : (
+              <OrdersList
+                orders={orders || []}
+                onRefresh={async () => {
+                  setLoadingOrders(true);
+                  try {
+                    const data = await orderService.getMyOrders(token);
+                    setOrders(Array.isArray(data) ? data : []);
+                  } catch (e) {
+                    setOrders([]);
+                  }
+                  setLoadingOrders(false);
+                }}
+              />
+            )}
+          </div>
+        </>
+      ) : (
+        <div className="p-4 bg-white rounded shadow text-sm text-gray-600">
+          Nếu bạn chưa đăng nhập, có thể tra cứu đơn bằng mã ở ô trên. Đăng nhập để xem lịch sử đơn hàng đầy đủ.
+        </div>
+      )}
     </div>
   );
 }

@@ -43,10 +43,10 @@ const ProductDrawer = ({ open, onClose, onSuccess }) => {
 
   const handleSubmit = async () => {
     try {
-      const token = localStorage.getItem("token");
+      const token = localStorage.getItem("auth_token");
 
       await axios.post(
-        `${process.env.REACT_APP_API_URL}/products/add-product/`,
+        `${process.env.REACT_APP_API_URL}/products/add-product`,
         {
           ...form,
           tags: form.tags

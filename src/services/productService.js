@@ -3,6 +3,8 @@ import axios from "axios";
 const API_URL = process.env.REACT_APP_API_URL + "/products";
 const VARIANT_API_URL = process.env.REACT_APP_API_URL + "/variants";
 
+const getAuthToken = (token) => token || localStorage.getItem("auth_token");
+
 // ============= PRODUCT APIs =============
 
 // Lấy tất cả sản phẩm
@@ -78,11 +80,14 @@ export const searchProducts = async (params = {}) => {
   }
 };
 
+// Authenticated actions use getAuthToken()
+
 export const createProduct = async (productData, token) => {
   try {
+    const auth = getAuthToken(token);
     const response = await axios.post(`${API_URL}/add-product`, productData, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
         "Content-Type": "application/json",
       },
     });
@@ -94,9 +99,10 @@ export const createProduct = async (productData, token) => {
 
 export const updateProduct = async (productId, productData, token) => {
   try {
+    const auth = getAuthToken(token);
     const response = await axios.put(`${API_URL}/${productId}`, productData, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
         "Content-Type": "application/json",
       },
     });
@@ -108,9 +114,10 @@ export const updateProduct = async (productId, productData, token) => {
 
 export const deleteProduct = async (productId, token) => {
   try {
+    const auth = getAuthToken(token);
     const response = await axios.delete(`${API_URL}/${productId}`, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
       },
     });
     return response.data;
@@ -121,12 +128,12 @@ export const deleteProduct = async (productId, token) => {
 
 // ============= VARIANT APIs =============
 
-// Tạo variant mới
 export const createVariant = async (formData, token) => {
   try {
+    const auth = getAuthToken(token);
     const response = await axios.post(`${VARIANT_API_URL}/add-variant`, formData, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
         "Content-Type": "multipart/form-data",
       },
     });
@@ -136,15 +143,15 @@ export const createVariant = async (formData, token) => {
   }
 };
 
-// Thêm size vào variant
 export const addSizeToVariant = async (variantId, sizeData, token) => {
   try {
+    const auth = getAuthToken(token);
     const response = await axios.post(
       `${VARIANT_API_URL}/${variantId}/sizes`,
       sizeData,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
           "Content-Type": "application/json",
         },
       }
@@ -155,15 +162,15 @@ export const addSizeToVariant = async (variantId, sizeData, token) => {
   }
 };
 
-// Cập nhật size trong variant
 export const updateSizeInVariant = async (variantId, sizeId, sizeData, token) => {
   try {
+    const auth = getAuthToken(token);
     const response = await axios.put(
       `${VARIANT_API_URL}/${variantId}/sizes/${sizeId}`,
       sizeData,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
           "Content-Type": "application/json",
         },
       }
@@ -174,14 +181,14 @@ export const updateSizeInVariant = async (variantId, sizeId, sizeData, token) =>
   }
 };
 
-// Xóa size khỏi variant
 export const removeSizeFromVariant = async (variantId, sizeId, token) => {
   try {
+    const auth = getAuthToken(token);
     const response = await axios.delete(
       `${VARIANT_API_URL}/${variantId}/sizes/${sizeId}`,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
         },
       }
     );
@@ -191,15 +198,15 @@ export const removeSizeFromVariant = async (variantId, sizeId, token) => {
   }
 };
 
-// Cập nhật hình ảnh variant
 export const updateVariantImages = async (variantId, formData, action = "append", token) => {
   try {
+    const auth = getAuthToken(token);
     const response = await axios.put(
       `${VARIANT_API_URL}/${variantId}/images?action=${action}`,
       formData,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
           "Content-Type": "multipart/form-data",
         },
       }

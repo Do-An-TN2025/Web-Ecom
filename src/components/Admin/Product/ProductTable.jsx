@@ -436,7 +436,8 @@ const ProductTable = ({ products, onEdit, onDelete, onView }) => {
           borderRadius: 2,
           border: "1px solid #e0e0e0",
           overflow: "hidden",
-          height: "calc(100vh - 280px)", // Điều chỉnh theo header + padding
+          // tăng tổng chiều cao vùng chứa (giảm offset để tận dụng chiều cao màn hình)
+          height: "calc(100vh - 120px)",
         }}
       >
         <DataGrid
@@ -449,10 +450,11 @@ const ProductTable = ({ products, onEdit, onDelete, onView }) => {
           }}
           pageSizeOptions={[5, 10, 20, 50, 100]}
           disableRowSelectionOnClick
-          rowHeight={90}
+          // giảm chút chiều cao mỗi hàng để vừa hiển thị nhiều hàng hơn
+          rowHeight={96}
           checkboxSelection
           onRowClick={(params) => {
-            setSelectedProduct(params.row.productData); 
+            setSelectedProduct(params.row.productData);
             setOpenVariantDialog(true);
           }}
           sx={{

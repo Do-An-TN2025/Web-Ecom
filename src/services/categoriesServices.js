@@ -2,6 +2,8 @@ import axios from "axios";
 
 const API_URL = process.env.REACT_APP_API_URL + "/categories";
 
+const getAuthToken = (token) => token || localStorage.getItem("auth_token");
+
 export const getCategories = async () => {
   try {
     const res = await axios.get(API_URL);
@@ -10,7 +12,6 @@ export const getCategories = async () => {
     throw err.response?.data || err;
   }
 };
-
 
 export const getCategoryBySlug = async (slug) => {
   try {
@@ -24,12 +25,13 @@ export const getCategoryBySlug = async (slug) => {
 // Thêm category mới
 export const createCategory = async (categoryData, token) => {
   try {
+    const auth = getAuthToken(token);
     const res = await axios.post(
       `${API_URL}/add-categories`,
       categoryData,
       {
         headers: {
-          Authorization: `Bearer ${token}`, // cần token admin
+          ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
         },
       }
     );
@@ -39,15 +41,16 @@ export const createCategory = async (categoryData, token) => {
   }
 };
 
-// Update category theo id hoặc slug (ở router bạn dùng slug → cần chỉnh lại cho khớp)
+// Update category theo id hoặc slug
 export const updateCategory = async (slug, categoryData, token) => {
   try {
+    const auth = getAuthToken(token);
     const res = await axios.put(
       `${API_URL}/${slug}`,
       categoryData,
       {
         headers: {
-          Authorization: `Bearer ${token}`,
+          ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
         },
       }
     );
@@ -60,9 +63,10 @@ export const updateCategory = async (slug, categoryData, token) => {
 // Xóa category
 export const deleteCategory = async (slug, token) => {
   try {
+    const auth = getAuthToken(token);
     const res = await axios.delete(`${API_URL}/${slug}`, {
       headers: {
-        Authorization: `Bearer ${token}`,
+        ...(auth ? { Authorization: `Bearer ${auth}` } : {}),
       },
     });
     return res.data;
