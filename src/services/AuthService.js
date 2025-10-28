@@ -113,5 +113,8 @@ export const logoutService = () => {
   sessionStorage.removeItem(TOKEN_KEY);
   localStorage.removeItem("user");
   localStorage.removeItem("checkout_shipping_v1");
+  localStorage.removeItem("inProgressPayment");
+  localStorage.removeItem("lastOrderCode");
+  localStorage.removeItem("lastOrder");
   console.log("LOGOUT CALLED");
 };

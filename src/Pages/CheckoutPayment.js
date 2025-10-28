@@ -59,13 +59,63 @@ export default function CheckoutPage() {
     [items]
   );
   const shippingFee = subtotal === 0 || subtotal > 498000 ? 0 : 30000;
-  const couponDiscountPercent = appliedCoupon?.percent || 0;
-  const discountValue = Math.round((subtotal * couponDiscountPercent) / 100);
+  // ưu tiên giá trị absolute trả về từ server; nếu chỉ có percent -> tính và cap bằng maxDiscount
+  const couponDiscountPercent = appliedCoupon?.percent ?? 0;
+  const discountValue = (() => {
+    // If server returned an absolute discount number, prefer it — but if voucher is percent-based, cap by maxDiscount
+    if (appliedCoupon && typeof appliedCoupon.discount === "number") {
+      const raw = Number(appliedCoupon.discount);
+      // if voucher has maxDiscount and percent exists, cap it
+      if (appliedCoupon?.percent && appliedCoupon?.maxDiscount != null) {
+        const cap = Number(appliedCoupon.maxDiscount);
+        return Number.isFinite(cap) ? Math.min(raw, cap) : raw;
+      }
+      return raw;
+    }
+    // If we only have percent info, compute and cap by maxDiscount
+    if (couponDiscountPercent > 0) {
+      const cap = Number(appliedCoupon?.maxDiscount ?? Infinity);
+      const calc = Math.round((subtotal * couponDiscountPercent) / 100);
+      return Number.isFinite(cap) ? Math.min(calc, cap) : calc;
+    }
+    return 0;
+  })();
   const grandTotal = Math.max(subtotal - discountValue + shippingFee, 0);
 
-  const handleApplyCoupon = (code) => {
-    const c = code?.trim()?.toUpperCase();
+  const handleApplyCoupon = (codeOrObj) => {
+    // normalize wrapper shapes
+    let payload = codeOrObj;
+    if (payload && payload.success && payload.data) payload = payload.data;
+    if (payload && payload.data) payload = payload.data;
+
+    // If API returned structured result (voucher + discount)
+    if (payload && typeof payload === "object" && (payload.voucher || typeof payload.discount === "number" || payload.totalAfter || payload.totalBefore)) {
+      const voucher = payload.voucher ?? null;
+      const serverDiscount = Number(payload.discount ?? 0);
+      const code = String(voucher?.code ?? payload.code ?? "").trim().toUpperCase();
+      const percent = voucher?.value ?? undefined;
+      const maxDiscount = voucher?.maxDiscount ?? undefined;
+
+      // If percent coupon but server returned discount > maxDiscount, cap it
+      let appliedDiscount = serverDiscount;
+      if (percent && maxDiscount != null) {
+        const cap = Number(maxDiscount);
+        if (Number.isFinite(cap)) appliedDiscount = Math.min(appliedDiscount, cap);
+      }
+
+      if (voucher || appliedDiscount > 0) {
+        setAppliedCoupon({ code, percent, maxDiscount, discount: appliedDiscount });
+        setVoucherCode(code);
+        return;
+      }
+    }
+
+    // fallback: treat as string or lightweight object { code: '...' }
+    const raw = codeOrObj?.code ?? codeOrObj ?? "";
+    const c = String(raw).trim().toUpperCase();
     if (!c) return;
+
+    // legacy hardcoded codes
     if (c === "SALE10" && subtotal >= 200000) {
       setAppliedCoupon({ code: c, percent: 10 });
       setVoucherCode(c);
@@ -76,6 +126,8 @@ export default function CheckoutPage() {
       setVoucherCode(c);
       return;
     }
+
+    // invalid
     setAppliedCoupon(null);
     setVoucherCode(null);
     alert("Mã không hợp lệ hoặc chưa đủ điều kiện.");
@@ -276,6 +328,17 @@ export default function CheckoutPage() {
         try { if (guestToken) saveGuestTokenFor(orderCode, guestToken); } catch (e) {}
       }
 
+      try {
+        const inProgress = {
+          orderCode: data?.order?.orderCode || data?.orderCode || null,
+          qrCode: data?.payment?.qrCode || data?.payment?.qrPayload || null,
+          checkoutUrl: data?.payment?.checkoutUrl || data?.paymentUrl || null,
+          guestToken: data?.guestToken || data?.guest_token || null,
+          startedAt: Date.now()
+        };
+        localStorage.setItem('inProgressPayment', JSON.stringify(inProgress));
+      } catch (e) { /* ignore */ }
+
       // If payment provider returns a checkoutUrl -> redirect (PayOS web flow)
       if (checkoutUrl && !qrCode) {
         await finishLoading();
@@ -366,6 +429,47 @@ export default function CheckoutPage() {
     setSuccessOrder(null);
     navigate("/orders", { state: { justPlaced: true, order: successOrder } });
   };
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('inProgressPayment');
+      if (!raw) return;
+      const p = JSON.parse(raw);
+      if (!p) return;
+      const { orderCode, qrCode, checkoutUrl } = p;
+
+      if (qrCode && orderCode) {
+        setQrPayload(qrCode);
+        setShowQRModal(true);
+        startQrPolling(orderCode);
+        return;
+      }
+
+      if (checkoutUrl && orderCode) {
+        window.open(checkoutUrl, "_blank");
+        startQrPolling(orderCode);
+        return;
+      }
+
+      // fallback: nếu chỉ có orderCode -> check once; nếu chưa thanh toán thì bắt đầu poll
+      if (orderCode) {
+        (async () => {
+          const statusResp = await checkPaymentOnce(orderCode); // implement tuỳ project
+          const status = statusResp?.paymentStatus || statusResp?.status || statusResp?.order?.paymentStatus;
+          if (status && String(status).toLowerCase() === 'paid') {
+            try { localStorage.removeItem('inProgressPayment'); } catch (e) {}
+            setSuccessOrder(statusResp);
+            setShowSuccess(true);
+          } else {
+            startQrPolling(orderCode);
+          }
+        })();
+      }
+    } catch (e) {
+      console.error('resume in-progress payment error', e);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
@@ -484,16 +588,28 @@ export default function CheckoutPage() {
           <aside className="lg:col-span-4">
             <div className="bg-white border rounded-2xl p-6 shadow-sm sticky top-24 space-y-6">
               <div className="space-y-3">
-                <button onClick={() => setOpenCouponModal(true)} className="w-full flex items-center justify-between gap-3 p-3 rounded-xl border hover:shadow-sm bg-white">
-                  <div className="flex items-center gap-3">
+                <div className="w-full p-3 rounded-xl border bg-white flex items-center justify-between">
+                  <div className="flex items-center gap-3 w-full" style={{ cursor: "pointer" }} onClick={() => setOpenCouponModal(true)}>
                     <div className="w-9 h-9 rounded-lg bg-blue-50 flex items-center justify-center text-blue-600">🏷️</div>
-                    <div className="text-left">
-                      <div className="text-sm font-medium text-gray-800">Chọn khuyến mãi</div>
-                      <div className="text-xs text-gray-400">Áp mã giảm giá hoặc khuyến mãi</div>
+                    <div className="text-left flex-1 min-w-0">
+                      <div className="text-sm font-medium text-gray-800">
+                        {appliedCoupon?.code ? `Khuyến mãi: ${appliedCoupon.code}` : "Chọn khuyến mãi"}
+                      </div>
+                      <div className="text-xs text-gray-400">
+                        {appliedCoupon
+                          ? (appliedCoupon.percent ? `${appliedCoupon.percent}%` : '') + (appliedCoupon.maxDiscount ? ` · Tối đa ${Number(appliedCoupon.maxDiscount).toLocaleString('vi-VN')}đ` : '')
+                          : "Áp mã giảm giá hoặc khuyến mãi"}
+                      </div>
                     </div>
                   </div>
-                  <div className="text-gray-400">›</div>
-                </button>
+                  <div className="flex items-center gap-2">
+                    {appliedCoupon?.code ? (
+                      <button  className=""></button>
+                    ) : (
+                      <div className="text-gray-400 px-2">›</div>
+                    )}
+                  </div>
+                </div>
 
                 <button onClick={() => setOpenPaymentModal(true)} className="w-full flex items-center justify-between gap-3 p-3 rounded-xl border hover:shadow-sm bg-white">
                   <div className="flex items-center gap-3">

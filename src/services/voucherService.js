@@ -46,9 +46,12 @@ export const deleteVoucher = async (id, token = null) => {
   return res.data
 }
 
-export const applyVoucher = async (payload, token = null) => {
-  const res = await api.post('/vouchers/apply', payload, { headers: token ? { Authorization: `Bearer ${token}` } : undefined })
-  return res.data
+export const applyVoucher = async (payload = {}, token = null) => {
+  const raw = payload?.code ?? payload?.voucher?.code ?? payload;
+  const safeCode = String(raw ?? "").trim();
+  const body = { ...payload, code: safeCode };
+  const res = await api.post('/vouchers/apply', body, { headers: token ? { Authorization: `Bearer ${token}` } : undefined });
+  return res.data;
 }
 
 export const redeemVoucher = async (payload, token = null) => {

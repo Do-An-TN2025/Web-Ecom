@@ -1,0 +1,170 @@
+/* ...existing code... */
+/* Order page styles - Professional, responsive, accessible */
+
+/* Reset / helper */
+.oc-page { font-family: Inter, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial; color: #1f2937; background: #f8fafc; min-height: 100vh; padding: 28px 12px; }
+.oc-container { max-width: 1180px; margin: 0 auto; }
+
+/* Header */
+.oc-header { display: flex; align-items: center; justify-content: space-between; gap: 16px; margin-bottom: 18px; }
+.oc-h1 { font-size: 22px; margin: 0; font-weight: 700; color: #0f172a; }
+.oc-lead { margin: 4px 0 0; color: #475569; font-size: 13px; }
+.oc-header-actions .btn { margin-left: 8px; }
+
+/* Grid */
+.oc-grid { display: grid; grid-template-columns: 1fr 360px; gap: 20px; align-items: start; }
+@media (max-width: 920px) { .oc-grid { grid-template-columns: 1fr; } .oc-side-col { order: 2; } }
+
+/* Blocks */
+.oc-block { margin-bottom: 14px; }
+
+/* Card - success */
+.oc-card { display: flex; gap: 14px; background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 6px 18px rgba(15,23,42,0.06); align-items: center; }
+.oc-success .oc-badge { width: 64px; height: 64px; border-radius: 14px; background: linear-gradient(180deg,#f0fdf4,#ecfdf3); display:flex; align-items:center; justify-content:center; }
+.oc-badge-icon { color: #059669; width: 28px; height: 28px; }
+.oc-card-main { flex: 1; }
+.oc-title { margin: 0 0 6px; font-size: 18px; font-weight: 700; color: #05204A; }
+.oc-sub { margin: 0 0 8px; color: #475569; font-size: 13px; }
+.oc-code { font-weight: 700; color: #0b3a4a; }
+
+.oc-meta { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 6px; color: #334155; font-size: 13px; }
+.oc-meta-label { color: #64748b; margin-right: 6px; font-weight: 500; }
+
+/* Actions */
+.oc-actions { display:flex; gap:10px; margin-top:14px; align-items:center; flex-wrap:wrap; }
+.btn { display:inline-flex; align-items:center; gap:8px; padding:8px 12px; border-radius:8px; cursor:pointer; font-weight:600; font-size:13px; }
+.btn:disabled { opacity:0.6; cursor:not-allowed; }
+.btn-primary { background: linear-gradient(180deg,#f59e0b,#d97706); color: #fff; border: none; box-shadow: 0 6px 14px rgba(217,119,6,0.16); }
+.btn-ghost { background: transparent; border: 1px solid rgba(15,23,42,0.06); color: #0f172a; }
+.btn-outline { background: transparent; border: 1px solid #e2e8f0; color: #0f172a; }
+.btn-ghost:hover, .btn-outline:hover { transform: translateY(-1px); transition: transform .12s ease; }
+
+/* Note text */
+.oc-note { margin-top:10px; color: #6b7280; font-size: 12px; }
+
+/* Search */
+.oc-search { display:flex; gap:8px; align-items:center; padding:12px; border-radius:10px; background:#fff; box-shadow: 0 6px 18px rgba(2,6,23,0.04); }
+.oc-input { flex:1; padding:10px 12px; border-radius:8px; border:1px solid #e6eef5; background: #fff; font-size:14px; color:#0f172a; }
+.oc-input::placeholder { color:#9aa5b1; }
+
+/* Alerts & result */
+.oc-alert { padding:10px; border-radius:8px; margin-top:8px; }
+.oc-alert-error { background: #fff7f6; color: #b91c1c; border: 1px solid #fee2e2; }
+
+.oc-result { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px; background:#fff; border-radius:10px; box-shadow: 0 4px 12px rgba(2,6,23,0.04); }
+.oc-result-left { display:flex; flex-direction:column; }
+.oc-result-code { font-weight:700; font-size:15px; color:#0b3a4a; }
+.oc-result-amount { color:#475569; font-size:13px; margin-top:4px; }
+.oc-result-right { text-align:right; }
+.oc-result-status { font-weight:700; color:#0f172a; margin-bottom:8px; }
+.oc-result-actions .btn { padding:6px 10px; font-size:13px; }
+
+/* Side column */
+.oc-side-col { background:transparent; }
+.oc-side-sticky { position: sticky; top: 24px; background:transparent; }
+.oc-side-header { margin-bottom:12px; }
+.oc-side-title { margin:0; font-size:15px; font-weight:700; }
+.oc-side-sub { color:#64748b; font-size:13px; margin-top:4px; }
+.oc-side-body { background:#fff; padding:12px; border-radius:10px; box-shadow: 0 6px 18px rgba(2,6,23,0.04); }
+
+/* Orders list */
+.oc-list { width:100%; }
+.oc-list-header { display:flex; align-items:center; justify-content:space-between; margin-bottom:8px; }
+.oc-list-title { margin:0; font-size:14px; font-weight:700; }
+.oc-items { list-style:none; padding:0; margin:0; display:flex; flex-direction:column; gap:8px; }
+.oc-item { display:flex; align-items:center; padding:10px; border-radius:8px; background:#fbfdff; border:1px solid #eef2f7; }
+.oc-item-left { flex:0 0 160px; }
+.oc-item-code { font-weight:700; font-size:13px; }
+.oc-item-when { color:#64748b; font-size:12px; margin-top:4px; }
+.oc-item-middle { flex:1; display:flex; flex-direction:column; gap:4px; }
+.oc-item-amount { font-weight:700; color:#0f172a; }
+.oc-item-recipient { font-size:13px; color:#475569; }
+.oc-item-right { display:flex; flex-direction:column; align-items:flex-end; gap:8px; }
+.oc-item-status { padding:6px 10px; border-radius:999px; font-size:12px; text-transform:capitalize; }
+.oc-item-status.pending { background:#fff7ed; color:#92400e; }
+.oc-item-status.paid { background:#ecfdf5; color:#065f46; }
+.oc-item-status.cancelled, .oc-item-status.canceled { background:#fff1f2; color:#9f1239; }
+
+/* Empty */
+.oc-empty { padding:12px; border-radius:8px; background:#fff; color:#64748b; text-align:center; }
+
+/* Skeletons */
+.oc-skeleton { background:#fff; padding:10px; border-radius:8px; }
+.oc-skel-row { display:flex; gap:8px; align-items:center; padding:8px 0; border-bottom:1px dashed #eef2f7; }
+.oc-skel-left, .oc-skel-middle, .oc-skel-right { background: linear-gradient(90deg,#f3f4f6,#eef2f7); border-radius:6px; }
+.oc-skel-left { width:120px; height:22px; }
+.oc-skel-middle { flex:1; height:18px; }
+.oc-skel-right { width:80px; height:18px; }
+
+/* Box / minor */
+.oc-box { padding:12px; background:#fff; border-radius:8px; text-align:center; }
+.oc-side-actions { margin-top:12px; display:flex; gap:8px; justify-content:center; }
+
+/* Small helpers */
+.oc-note-muted { color:#64748b; font-size:13px; }
+.oc-subtitle { font-size:15px; margin-bottom:8px; }
+.oc-tips { margin:0; padding-left:18px; color:#475569; }
+
+/* Loading */
+.oc-loading-block { display:flex; align-items:center; gap:10px; color:#475569; padding:12px; background:#fff; border-radius:10px; }
+
+/* Responsive tweaks */
+@media (max-width:640px) {
+  .oc-container { padding: 8px; }
+  .oc-grid { gap: 12px; }
+  .oc-side-sticky { position: static; }
+}
+
+/* Screen reader only */
+.sr-only { position: absolute !important; height: 1px; width: 1px; overflow: hidden; clip: rect(1px,1px,1px,1px); white-space: nowrap; }
+
+/* Icon spinner animation */
+.oc-spinner { width:18px; height:18px; animation: oc-rotate 1s linear infinite; }
+@keyframes oc-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+
+
+
+/* Minimal helpers used by the Tailwind JS file */
+
+/* screen-reader only */
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* fallback spinner animation for non-tailwind environments */
+@keyframes oc-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.animate-spin { animation: oc-rotate 1s linear infinite; }
+
+
+/* Minimal helpers for the Tailwind page */
+
+/* screen-reader only */
+.sr-only {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+/* fallback spin animation */
+@keyframes oc-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+.animate-spin { animation: oc-rotate 1s linear infinite; }
+
+/* small responsive fix for very narrow screens */
+@media (max-width: 420px) {
+  main { padding-left: 12px; padding-right: 12px; }
+}

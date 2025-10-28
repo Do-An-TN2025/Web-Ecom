@@ -144,13 +144,15 @@ export default function CouponModal({ open, onClose, onApply, subtotal = 0 }) {
       const params = { active: true }
       const safeQ = String(q || '').trim()
       if (safeQ) params.q = safeQ
-      const data = await voucherApi.getVouchers(params)
+      const data = await voucherApi.getMyVouchers(params)
       setAvailable((data || []).map(v => ({
-        code: String(v.code || ''),
-        title: v.type === 'percent' ? `${v.value}%` : `${currency(v.value)} đ`,
-        min: Number(v.minOrderValue || 0),
-        raw: v
-      })))
+      code: String(v.code || ''),
+      title: v.type === 'percent' ? `${v.value}%` : `${currency(v.value)} đ`,
+      min: Number(v.minOrderValue || 0),
+      maxDiscount: Number(v.maxDiscount ?? 0), // <-- thêm
+      percent: v.type === 'percent' ? Number(v.value) : undefined,
+      raw: v
+    })))
     } catch (err) {
       setAvailable([])
     } finally {
@@ -178,26 +180,27 @@ const safeTrim = (v) => {
   }
 
 const handleConfirm = async () => {
-    const codeToUseRaw = selected?.code ?? query ?? ''
-    const codeToUse = safeTrim(codeToUseRaw).toUpperCase()
-    if (!codeToUse) { showToast('Vui lòng chọn hoặc nhập mã', 'error'); return }
-    setLoading(true)
-    try {
-      // debug log tạm để xác định nguyên nhân nếu vẫn lỗi
-      console.debug('Applying voucher - selected:', selected, 'query:', query, 'normalizedCode:', codeToUse)
+  // normalize code from selected or input
+  const raw = selected?.code ?? query ?? "";
+  const codeToUse = String(raw ?? "").trim().toUpperCase();
+  if (!codeToUse) { showToast('Vui lòng chọn hoặc nhập mã', 'error'); return; }
 
-      const payload = { code: String(codeToUse), orderTotal: Number(subtotal || 0) }
-      const res = await voucherApi.applyVoucher(payload)
-      showToast(`Tiết kiệm ${currency(res.discount)} đ`, 'success')
-      onApply && onApply({ code: String(codeToUse), discount: res.discount, newTotal: res.newTotal })
-      onClose && onClose()
-    } catch (err) {
-      const text = err?.response?.data?.message || err?.message || 'Áp dụng thất bại'
-      showToast(text, 'error')
-    } finally {
-      setLoading(false)
-    }
+  setLoading(true);
+  try {
+    console.debug('[CouponModal] applying code:', codeToUse);
+    const res = await voucherApi.applyVoucher({ code: codeToUse, orderTotal: Number(subtotal || 0) });
+    const payload = res?.data ?? res;
+    console.debug('[CouponModal] apply result normalized:', payload);
+    onApply && onApply(payload);
+    onClose && onClose();
+    showToast(`Áp mã thành công`, 'success');
+  } catch (err) {
+    console.error('[CouponModal] apply error', err);
+    showToast(err?.response?.data?.message || err?.message || 'Áp dụng thất bại', 'error');
+  } finally {
+    setLoading(false);
   }
+};
   if (!open) return null
 
   return (
@@ -255,8 +258,13 @@ const handleConfirm = async () => {
                       <div style={styles.code}>{item.code}</div>
                       <div style={styles.desc}>{item.title}</div>
                       <div style={styles.smallMuted}>Yêu cầu tối thiểu: {currency(item.min)} đ</div>
+                     {item.maxDiscount > 0 && (
+                       <div style={{ ...styles.smallMuted, marginTop: 4 }}>
+                         Giảm tối đa: <strong>{currency(item.maxDiscount)} đ</strong>
+                       </div>
+                     )}
                     </div>
-
+ 
                     <div>
                       <button
                         onClick={(e) => { e.stopPropagation(); handleSelect(item) }}
@@ -275,8 +283,16 @@ const handleConfirm = async () => {
         </div>
 
         <div style={styles.footer}>
-          <div style={styles.smallMuted}>Mã đã chọn: <strong style={{ color: '#111' }}>{selected?.code || (query ? query.toUpperCase() : '—')}</strong></div>
-
+          <div style={styles.smallMuted}>
+            Mã đã chọn: <strong style={{ color: '#111' }}>{selected?.code || (query ? query.toUpperCase() : '—')}</strong>
+            {/* nếu voucher có percent / maxDiscount thì hiển thị thêm */}
+            {selected?.percent ? (
+              <span style={{ marginLeft: 8 }}>
+                <em>({selected.percent}%{selected?.maxDiscount ? `, tối đa ${currency(selected.maxDiscount)} đ` : ''})</em>
+              </span>
+            ) : null}
+          </div>
+ 
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={onClose} style={styles.cancel}>Hủy</button>
             <button onClick={handleConfirm} style={styles.confirm} disabled={loading}>
