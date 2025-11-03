@@ -144,27 +144,3 @@
 @keyframes oc-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
 .animate-spin { animation: oc-rotate 1s linear infinite; }
 
-
-/* Minimal helpers for the Tailwind page */
-
-/* screen-reader only */
-.sr-only {
-  position: absolute !important;
-  width: 1px;
-  height: 1px;
-  padding: 0;
-  margin: -1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-  border: 0;
-}
-
-/* fallback spin animation */
-@keyframes oc-rotate { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-.animate-spin { animation: oc-rotate 1s linear infinite; }
-
-/* small responsive fix for very narrow screens */
-@media (max-width: 420px) {
-  main { padding-left: 12px; padding-right: 12px; }
-}
