@@ -216,3 +216,14 @@ export const updateVariantImages = async (variantId, formData, action = "append"
     throw new Error(error.response?.data?.message || "Failed to update variant images");
   }
 };
+
+export const getRecentlyViewedProducts = async (slugs = []) => {
+  try {
+    const response = await axios.post(`${API_URL}/recently-viewed`, { slugs });
+    return response.data;
+  } catch (error) {
+    throw new Error(
+      error.response?.data?.message || "Failed to fetch recently viewed products"
+    );
+  }
+};

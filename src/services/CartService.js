@@ -94,7 +94,8 @@ const CartService = {
         return res;
       } else {
         // guest: local storage only, do NOT call server
-        const existing = readLocalCart();
+          const existing = readLocalCart();
+          console.debug("[CartService.addItem] guest before add, localCart:", JSON.parse(JSON.stringify(existing)), "incoming:", JSON.parse(JSON.stringify(item)));
         const existingIndex = existing.findIndex(
           i => i.productId === item.productId &&
                i.color === item.color &&
@@ -107,8 +108,9 @@ const CartService = {
           existing.push(item);
         }
 
-        writeLocalCart(existing); 
-        return { items: existing };
+  writeLocalCart(existing); 
+  console.debug("[CartService.addItem] guest after write, localCart:", JSON.parse(JSON.stringify(existing)));
+  return { items: existing };
       }
     } catch (error) {
       console.error("CartService addItem error:", error);
