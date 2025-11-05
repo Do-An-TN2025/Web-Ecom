@@ -331,6 +331,57 @@ export const CartProvider = ({ children }) => {
   }, []);
 
   /* -------------------------
+     decrementItem: decrement by 1 (or remove if becomes 0)
+     ------------------------- */
+  const decrementItem = useCallback((keyOrId) => {
+    // optimistic update
+    setItems((prev) => {
+      const normalizedPrev = prev.map(normalizeItem);
+      const idx = normalizedPrev.findIndex(it => it.key === keyOrId || String(it._id) === String(keyOrId));
+      if (idx === -1) return normalizedPrev;
+      const currentQty = Number(normalizedPrev[idx].qty || normalizedPrev[idx].quantity || 0);
+      if (currentQty > 1) {
+        normalizedPrev[idx] = { ...normalizedPrev[idx], qty: currentQty - 1, quantity: currentQty - 1 };
+        return dedupeItems(normalizedPrev);
+      }
+      // remove
+      const filtered = normalizedPrev.filter((it, i) => i !== idx);
+      return dedupeItems(filtered);
+    });
+
+    // persist immediate for guest users
+    try {
+      const token = localStorage.getItem("auth_token");
+      const user = localStorage.getItem("user");
+      if (!token || !user) {
+        const local = readLocal();
+        const updated = (local || []).map(normalizeItem).map(it =>
+          (it.key === keyOrId || String(it._id) === String(keyOrId))
+            ? { ...it, qty: Math.max(0, (Number(it.qty || it.quantity || 0) - 1)) }
+            : it
+        ).filter(it => Number(it.qty || it.quantity || 0) > 0);
+        writeLocal(updated);
+      }
+    } catch (e) {
+      console.error("[CartContext] decrementItem persist error", e);
+    }
+
+    return (async () => {
+      try {
+        const res = await CartService.decrementItem(keyOrId);
+        if (res) {
+          const serverItems = res && Array.isArray(res.items) ? res.items : Array.isArray(res) ? res : null;
+          if (serverItems && Array.isArray(serverItems)) setItems(dedupeItems(serverItems, { sum: false }));
+        }
+        return res;
+      } catch (err) {
+        console.error('[CartContext] decrementItem error', err);
+        throw err;
+      }
+    })();
+  }, []);
+
+  /* -------------------------
      removeItem
      ------------------------- */
   const removeItem = useCallback((keyOrId) => {
@@ -392,6 +443,7 @@ export const CartProvider = ({ children }) => {
       items,
       addItem,
       updateQty,
+      decrementItem,
       removeItem,
       clearCart,
       totalItems,

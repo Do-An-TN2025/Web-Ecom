@@ -27,7 +27,7 @@ function RoundCheckbox({ checked, onChange, ariaLabel }) {
 }
 
 export default function Cart() {
-  const { items, updateQty, removeItem, clearCart, totalAmount } = useCart();
+  const { items, updateQty, removeItem, decrementItem, clearCart, totalAmount } = useCart();
   const navigate = useNavigate();
 
   // Coupon (demo)
@@ -66,7 +66,8 @@ export default function Cart() {
   // normalize items so the UI code can be simple regardless of API shape
   const normalized = useMemo(() => {
     return items.map((it) => {
-      const id = it.key || it._id || it.id || `${it.productId}-${it.variantId}-${it.size}`;
+      // Prefer database-backed _id when available. Falling back to key or composed id only as last resort.
+      const id = it._id || it.key || it.id || `${it.productId}-${it.variantId}-${it.size}`;
       const qty = Number(it.qty ?? it.quantity ?? 0);
       const price = Number(it.finalPrice ?? it.discountPrice ?? it.price ?? 0);
       const img =
@@ -146,7 +147,7 @@ export default function Cart() {
           <p className="text-gray-500 mb-4 text-sm">
             Hãy khám phá sản phẩm và thêm vào giỏ để bắt đầu.
           </p>
-          <Link
+          <Link 
             to="/"
             className="inline-block bg-yellow-500 hover:bg-yellow-600 text-white font-semibold px-5 py-2 rounded-lg transition"
           >
@@ -213,13 +214,8 @@ export default function Cart() {
                     <div className="mt-3 flex items-center gap-3">
                       <div className="flex items-center border rounded-full overflow-hidden">
                         <button
-                          onClick={() => updateQty(it.id, Math.max(1, it.qty - 1))}
-                          disabled={it.qty <= 1}
-                          className={`px-3 py-1 sm:px-4 sm:py-2 text-lg font-medium ${
-                            it.qty <= 1
-                              ? "text-gray-300 cursor-not-allowed"
-                              : "hover:bg-gray-100"
-                          }`}
+                          onClick={() => decrementItem(it.id)}
+                          className={`px-3 py-1 sm:px-4 sm:py-2 text-lg font-medium hover:bg-gray-100`}
                           aria-label="Giảm số lượng"
                         >
                           −

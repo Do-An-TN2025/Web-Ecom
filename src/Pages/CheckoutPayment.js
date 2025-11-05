@@ -568,7 +568,7 @@ export default function CheckoutPage() {
                   const price = it.finalPrice ?? it.price ?? 0;
                   return (
                     <li key={it.key || it._id || `${it.productId}-${it.variantId}-${it.size}`} className="flex items-center gap-4">
-                      <img src={it.image || "/placeholder.jpg"} alt={it.name || "sp"} className="w-20 h-20 object-cover rounded-lg border" />
+                      <img src={it.variant.images || "/placeholder.jpg"} alt={it.name || "sp"} className="w-20 h-20 object-cover rounded-lg border" />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium line-clamp-2">{it.name || it.product?.title}</div>
                         <div className="text-xs text-gray-500 mt-1">Size: {it.size || "-"} · Số lượng: {qty}</div>

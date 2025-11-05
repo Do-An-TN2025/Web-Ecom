@@ -139,6 +139,35 @@ const CartService = {
     }
   },
 
+  // decrement one quantity of an item (server has an endpoint for auth: PATCH /cart/item/:itemId/decrement)
+  // For guests we update local storage similarly.
+  async decrementItem(itemIdOrKey) {
+    try {
+      if (hasAuth()) {
+        return apiFetch(`/cart/item/${encodeURIComponent(itemIdOrKey)}/decrement`, {
+          method: 'PATCH'
+        });
+      }
+
+      const items = readLocalCart();
+      const idx = items.findIndex(i => i.key === itemIdOrKey || String(i._id) === String(itemIdOrKey));
+      if (idx === -1) return { items };
+
+      const current = items[idx];
+      const currentQty = Number(current.qty ?? current.quantity ?? 0);
+      if (currentQty > 1) {
+        items[idx].qty = currentQty - 1;
+      } else {
+        items.splice(idx, 1);
+      }
+      writeLocalCart(items);
+      return { items };
+    } catch (err) {
+      console.error('CartService decrementItem error:', err);
+      throw err;
+    }
+  },
+
   async removeItem(itemIdOrKey) {
     try {
       if (hasAuth()) {
