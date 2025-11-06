@@ -1,5 +1,7 @@
 import Hero from "../features/Hero";
 import { useLocation } from "react-router-dom";
+import BestSellers from "../components/Home/BestSellers";
+import NewProducts from "../components/Home/NewProducts";
 
 export default function Home() {
   const location = useLocation();
@@ -8,9 +10,14 @@ export default function Home() {
   return (
     <div>
       {isHomePage && <Hero />}
-      <div className="h-[2000px] bg-gray-100">
-        <p className="p-6">Chưa có nd1</p>
-      </div>
+
+      <main className="max-w-screen-lg mx-auto px-4">
+        <BestSellers />
+        <NewProducts />
+
+        {/* placeholder for more sections or content */}
+        <div className="h-40" />
+      </main>
     </div>
   );
 }

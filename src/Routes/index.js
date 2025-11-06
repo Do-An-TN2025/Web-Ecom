@@ -14,6 +14,7 @@ import WishlistPage from '../Pages/WishlistPage';
 import CheckoutPayment from '../Pages/CheckoutPayment';
 import Voucher from '../components/Admin/Voucher/Voucher';
 import Order from '../Pages/Order';
+import OrderDetail from '../Pages/OrderDetail';
 import OrdersAdmin from '../Pages/admin/OrdersAdmin';
 const AppRoutes = () => {
   return (
@@ -26,7 +27,8 @@ const AppRoutes = () => {
       <Route path="/cart" element={<Cart />} />
        <Route path="/wishlist" element={<WishlistPage />} />
        <Route path="/checkout" element={<CheckoutPayment />} />
-       <Route path="/orders" element={<Order />} />
+      <Route path="/orders/:orderCode" element={<OrderDetail />} />
+      <Route path="/orders" element={<Order />} />
       <Route path="/admin" element={<AdminDashboard />} />
       <Route path="/admin/products" element={<AdminProducts />} />
       <Route path="/admin/categories" element={<AdminCategories />} />

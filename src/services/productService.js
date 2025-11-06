@@ -227,3 +227,23 @@ export const getRecentlyViewedProducts = async (slugs = []) => {
     );
   }
 };
+
+// Get best selling products
+export const getBestSellers = async (params = {}) => {
+  try {
+    const response = await axios.get(`${API_URL}/best-sellers`, { params });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to fetch best sellers");
+  }
+};
+
+// Get newest products
+export const getNewProducts = async (params = {}) => {
+  try {
+    const response = await axios.get(`${API_URL}/new`, { params });
+    return response.data;
+  } catch (error) {
+    throw new Error(error.response?.data?.message || "Failed to fetch new products");
+  }
+};

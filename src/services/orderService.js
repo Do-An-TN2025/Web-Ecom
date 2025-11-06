@@ -68,6 +68,18 @@ export async function getOrderById(id, token) {
   return handleResponse(res);
 }
 
+export async function getOrderByCode(orderCode, token = null) {
+  if (!orderCode) throw new Error("orderCode required");
+  const res = await fetch(`${API_URL}/orders/code/${encodeURIComponent(orderCode)}`, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader(token),
+    },
+  });
+  return handleResponse(res);
+}
+
 export async function cancelOrder(id, token) {
   if (!token) throw new Error("Token required");
   const res = await fetch(`${API_URL}/orders/${encodeURIComponent(id)}/cancel`, {
