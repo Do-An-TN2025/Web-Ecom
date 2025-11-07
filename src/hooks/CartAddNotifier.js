@@ -8,7 +8,7 @@ const CartToastCtx = createContext(null);
 export const CartToastProvider = ({ children }) => {
   const [toasts, setToasts] = useState([]);
 
-  const hide = useCallback((id) => {
+  const hide = useCallback((id) => {  
     setToasts((t) => t.filter((x) => x.id !== id));
   }, []);
 

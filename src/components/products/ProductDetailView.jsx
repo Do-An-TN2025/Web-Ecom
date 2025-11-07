@@ -1,6 +1,6 @@
 import { useState, useMemo, useEffect, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Star, Package, RotateCcw, Truck } from "lucide-react";
 import { useCart } from "../../contexts/CartContext";
 import { useCartToast } from "../../hooks/CartAddNotifier";
 import { getRecentlyViewedProducts } from "../../services/productService";
@@ -35,6 +35,7 @@ export default function ProductDetailView({ product }) {
   const [quantity, setQuantity] = useState(1);
   const [imageIndex, setImageIndex] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
+  const [activeTab, setActiveTab] = useState("description"); // description | shipping | returns
   const images = selectedColor.images || [];
 
   // persist recent slugs (array, newest first, max 20)
@@ -435,6 +436,12 @@ export default function ProductDetailView({ product }) {
               {selectedSizeObj?.stock >= 0 && (
                 <span className="ml-3 text-[11px] font-medium text-zinc-500">
                   Tồn: {selectedSizeObj.stock}
+                  {selectedSizeObj.stock < 5 && selectedSizeObj.stock > 0 && (
+                    <span className="ml-2 text-orange-600">⚠️ Sắp hết</span>
+                  )}
+                  {selectedSizeObj.stock === 0 && (
+                    <span className="ml-2 text-red-600">❌ Hết hàng</span>
+                  )}
                 </span>
               )}
             </p>
@@ -511,6 +518,178 @@ export default function ProductDetailView({ product }) {
             <p>Giao trong 3–5 ngày, freeship đơn từ 498k</p>
             <p>Đổi trả trong vòng 15 ngày</p>
           </div>
+
+          {/* Rating Section */}
+          {product.rating && (
+            <div className="mt-6 flex items-center gap-4 rounded-lg border border-zinc-200 bg-white p-4">
+              <div className="flex items-center gap-1">
+                {[...Array(5)].map((_, i) => (
+                  <Star
+                    key={i}
+                    className={`h-5 w-5 ${
+                      i < Math.round(product.rating.average || 0)
+                        ? "fill-yellow-400 text-yellow-400"
+                        : "fill-zinc-200 text-zinc-200"
+                    }`}
+                  />
+                ))}
+              </div>
+              <div className="text-sm">
+                <span className="font-semibold text-zinc-900">
+                  {product.rating.average > 0
+                    ? product.rating.average.toFixed(1)
+                    : "Chưa có đánh giá"}
+                </span>
+                {product.rating.count > 0 && (
+                  <span className="ml-2 text-zinc-500">
+                    ({product.rating.count} đánh giá)
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Tabs Section */}
+      <div className="mt-12 border-t pt-8">
+        <div className="flex gap-6 border-b border-zinc-200">
+          <button
+            onClick={() => setActiveTab("description")}
+            className={`pb-3 text-sm font-medium transition-colors ${
+              activeTab === "description"
+                ? "border-b-2 border-yellow-500 text-yellow-600"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <Package className="inline-block mr-2 h-4 w-4" />
+            Mô tả sản phẩm
+          </button>
+          <button
+            onClick={() => setActiveTab("shipping")}
+            className={`pb-3 text-sm font-medium transition-colors ${
+              activeTab === "shipping"
+                ? "border-b-2 border-yellow-500 text-yellow-600"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <Truck className="inline-block mr-2 h-4 w-4" />
+            Vận chuyển
+          </button>
+          <button
+            onClick={() => setActiveTab("returns")}
+            className={`pb-3 text-sm font-medium transition-colors ${
+              activeTab === "returns"
+                ? "border-b-2 border-yellow-500 text-yellow-600"
+                : "text-zinc-600 hover:text-zinc-900"
+            }`}
+          >
+            <RotateCcw className="inline-block mr-2 h-4 w-4" />
+            Đổi trả
+          </button>
+        </div>
+
+        <div className="mt-6">
+          <AnimatePresence mode="wait">
+            {activeTab === "description" && (
+              <motion.div
+                key="description"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="prose prose-sm max-w-none"
+              >
+                {product.shortDescription ? (
+                  <div className="space-y-4 text-zinc-700">
+                    {product.shortDescription.split("\n\n").map((section, idx) => {
+                      const lines = section.split("\n");
+                      const title = lines[0];
+                      const content = lines.slice(1);
+
+                      return (
+                        <div key={idx} className="rounded-lg bg-zinc-50 p-4">
+                          <h3 className="mb-2 text-base font-semibold text-zinc-900">
+                            {title}
+                          </h3>
+                          <ul className="ml-4 space-y-1 text-sm">
+                            {content.map((line, i) => {
+                              const cleanLine = line.replace(/^[•\-]\s*/, "").trim();
+                              if (!cleanLine) return null;
+                              return (
+                                <li key={i} className="list-disc">
+                                  {cleanLine}
+                                </li>
+                              );
+                            })}
+                          </ul>
+                        </div>
+                      );
+                    })}
+                  </div>
+                ) : (
+                  <p className="text-zinc-500">Chưa có mô tả chi tiết.</p>
+                )}
+              </motion.div>
+            )}
+
+            {activeTab === "shipping" && (
+              <motion.div
+                key="shipping"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4 text-sm text-zinc-700"
+              >
+                <div className="rounded-lg bg-zinc-50 p-4">
+                  <h4 className="font-semibold text-zinc-900">🚚 Giao hàng tiêu chuẩn</h4>
+                  <p className="mt-2">Thời gian: 3-5 ngày làm việc</p>
+                  <p>Phí ship: 30.000đ (Miễn phí cho đơn từ 498.000đ)</p>
+                </div>
+                <div className="rounded-lg bg-zinc-50 p-4">
+                  <h4 className="font-semibold text-zinc-900">⚡ Giao hàng nhanh</h4>
+                  <p className="mt-2">Thời gian: 1-2 ngày làm việc</p>
+                  <p>Phí ship: 50.000đ (Áp dụng khu vực nội thành)</p>
+                </div>
+                <div className="rounded-lg bg-zinc-50 p-4">
+                  <h4 className="font-semibold text-zinc-900">📦 Kiểm tra hàng khi nhận</h4>
+                  <p className="mt-2">
+                    Bạn có thể kiểm tra sản phẩm trước khi thanh toán cho nhân viên giao hàng.
+                  </p>
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === "returns" && (
+              <motion.div
+                key="returns"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                transition={{ duration: 0.2 }}
+                className="space-y-4 text-sm text-zinc-700"
+              >
+                <div className="rounded-lg bg-zinc-50 p-4">
+                  <h4 className="font-semibold text-zinc-900">🔄 Chính sách đổi trả</h4>
+                  <ul className="mt-2 ml-4 space-y-1 list-disc">
+                    <li>Đổi trả trong vòng 15 ngày kể từ ngày nhận hàng</li>
+                    <li>Sản phẩm chưa qua sử dụng, còn nguyên tem mác</li>
+                    <li>Miễn phí đổi size/màu (1 lần đổi)</li>
+                    <li>Hoàn tiền 100% nếu lỗi từ nhà sản xuất</li>
+                  </ul>
+                </div>
+                <div className="rounded-lg bg-zinc-50 p-4">
+                  <h4 className="font-semibold text-zinc-900">❌ Không áp dụng đổi trả</h4>
+                  <ul className="mt-2 ml-4 space-y-1 list-disc">
+                    <li>Sản phẩm đã qua sử dụng hoặc giặt tẩy</li>
+                    <li>Sản phẩm bị rách, bẩn do người dùng</li>
+                    <li>Mất tem mác, hóa đơn mua hàng</li>
+                  </ul>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
         </div>
       </div>
 
@@ -560,7 +739,7 @@ function RecentlyViewedList({ items = [], loading = false }) {
           items.map((p) => (
             <a
               key={p._id}
-              href={`/products/${p.slug}`}
+              href={`/product/${p.slug}`}
               className="min-w-[220px] max-w-[220px] shrink-0 rounded-lg bg-white p-3 shadow-sm transition-transform hover:-translate-y-1"
             >
               <div className="aspect-[3/4] mb-3 overflow-hidden rounded bg-zinc-100">
