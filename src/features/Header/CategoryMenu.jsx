@@ -2,18 +2,22 @@ import { useRef, useEffect, useState, useCallback } from "react";
 
 export default function CategoryMenu({ categories, show, setShow, onCategoryClick }) {
   const menuRef = useRef(null);
-  const [openGroups, setOpenGroups] = useState({ nam: true, nu: true, "tre-em": true });
+  const [openGroups, setOpenGroups] = useState({ nam: true, nu: true, "tre-em": true , khac: true});
 
   const groupedCategories = {
     nam: categories.filter((cat) => cat.path?.startsWith("nam")),
     nu: categories.filter((cat) => cat.path?.startsWith("nu")),
     "tre-em": categories.filter((cat) => cat.path?.startsWith("tre-em")),
+    khac: categories.filter((cat) => {
+      return !cat.path?.startsWith("nam") && !cat.path?.startsWith("nu") && !cat.path?.startsWith("tre-em");
+    }),
   };
 
   const groupTitles = {
     nam: "NAM",
     nu: "NỮ",
     "tre-em": "TRẺ EM",
+    khac : "KHÁC",
   };
 
   // Close when clicking outside (desktop scenario mainly)
@@ -34,7 +38,8 @@ export default function CategoryMenu({ categories, show, setShow, onCategoryClic
   useEffect(() => {
     const mq = window.matchMedia('(max-width: 767px)');
     if (mq.matches) {
-      setOpenGroups({ nam: false, nu: false, "tre-em": false });
+      // Collapse all groups on small screens by default, including `khac`
+      setOpenGroups({ nam: false, nu: false, "tre-em": false, khac: false });
     }
   }, []);
 
@@ -66,7 +71,7 @@ export default function CategoryMenu({ categories, show, setShow, onCategoryClic
       </div>
 
       <div className="mx-auto max-w-7xl px-4 pb-4 md:container md:px-0 md:pb-0">
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-12">
+        <div className="grid grid-cols-1 gap-4 md:grid-cols-4 md:gap-12">
           {Object.keys(groupedCategories).map((group) => {
             const isOpen = openGroups[group];
             const items = groupedCategories[group];

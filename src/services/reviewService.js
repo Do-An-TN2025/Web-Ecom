@@ -153,6 +153,20 @@ const reviewService = {
       return false;
     }
   },
+
+  /**
+   * Get latest five customer reviews (recent customers)
+   * @returns {Promise}
+   */
+  getLatestFiveCustomerReviews: async () => {
+    try {
+      const response = await axiosInstance.get('/products/reviews/recent-customers');
+      return response.data;
+    } catch (error) {
+      console.error('Get recent customer reviews error:', error);
+      throw error.response?.data || error;
+    }
+  },
 };
 
 export default reviewService;

@@ -109,6 +109,7 @@ export default function OrdersAdmin() {
   const [q, setQ] = useState("");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState("desc");
+  const [dateFilter, setDateFilter] = useState("");
   const [snack, setSnack] = useState({ open: false, severity: "info", message: "" });
   const [updatingId, setUpdatingId] = useState(null);
   const [selectedOrder, setSelectedOrder] = useState(null);
@@ -142,6 +143,8 @@ export default function OrdersAdmin() {
       }
 
       if (q) query.q = q;
+      // If a specific date is selected, send it as `date` (backend should accept YYYY-MM-DD)
+      if (dateFilter) query.date = dateFilter;
 
       const res = await getOrdersAdmin(query, token);
       // Nếu backend trả tabs: set dùng tabs; nếu không có, fallback để tính từ res.data
@@ -158,12 +161,13 @@ export default function OrdersAdmin() {
     } finally {
       setLoading(false);
     }
-  }, [activeTab, meta.page, meta.limit, q, sortBy, sortOrder, token]);
+  }, [activeTab, meta.page, meta.limit, q, sortBy, sortOrder, dateFilter, token]);
 
   useEffect(() => {
     fetch({ page: 1 });
+    // Re-fetch when activeTab, sort options or date filter change
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [activeTab, sortBy, sortOrder]);
+  }, [activeTab, sortBy, sortOrder, dateFilter]);
 
   useEffect(() => {
     if (searchRef.current) clearTimeout(searchRef.current);
@@ -201,7 +205,7 @@ export default function OrdersAdmin() {
       sortBy,
       sortOrder,
     });
-
+    
     if (activeTab !== "all") {
       if (activeTab === "paid") query.append("paymentStatus", "paid");
       else if (activeTab === "problems") query.append("paymentStatus", "failed");
@@ -209,6 +213,7 @@ export default function OrdersAdmin() {
     }
 
     if (q) query.append("q", q);
+    if (dateFilter) query.append("date", dateFilter);
     window.open(`/api/admin/orders?${query.toString()}`, "_blank");
   };
 
@@ -266,10 +271,8 @@ export default function OrdersAdmin() {
 
   return (
     <AdminLayout>
-      <Box p={3}>
-        <Typography variant="h5" fontWeight={600} mb={3}>Quản lý đơn hàng</Typography>
-
-        {/* Summary cards (stabilized display) */}
+      <Box p={3}>  
+      {/* Summary cards (stabilized display) */}
         {tabs ? (
           <Grid container spacing={2} mb={3}>
             <Grid item xs={12} sm={6} md={3}>
@@ -365,6 +368,16 @@ export default function OrdersAdmin() {
                 ),
               }}
             />
+
+              <TextField
+                size="small"
+                label="Ngày"
+                type="date"
+                value={dateFilter}
+                onChange={(e) => setDateFilter(e.target.value)}
+                sx={{ width: 160 }}
+                InputLabelProps={{ shrink: true }}
+              />
 
             <FormControl size="small" sx={{ minWidth: 160 }}>
               <InputLabel>Sắp xếp theo</InputLabel>

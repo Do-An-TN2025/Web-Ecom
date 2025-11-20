@@ -192,7 +192,7 @@ export default function ProductDetailView({ product }) {
 
   const handleAddToCart = async () => {
     if (!selectedSizeObj) return;
-    if (isAdding) return;
+    if (isAdding) return; 
     setIsAdding(true);
 
     const basePrice = selectedSizeObj.price || selectedSizeObj.finalPrice || 0;

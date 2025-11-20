@@ -72,7 +72,7 @@ function ProductCard({ product, onAdd, index }) {
             <Star size={12} className="fill-yellow-400 text-yellow-400" />
             <span className="text-xs font-bold text-gray-800">{product.rating || 4.5}</span>
           </div>
-          <span className="text-[10px] text-gray-500">Đã bán {product.sold || 0}</span>
+          <span className="text-[10px] text-gray-500">Đã bán {product.soldQuantity || 0}</span>
         </div>
       </div>
 
@@ -242,19 +242,7 @@ export default function BestSellers({ limit = 8, days = 90, autoPlay = true }) {
               <p className="text-sm text-gray-500 mt-1">Top {limit} sản phẩm được yêu thích nhất</p>
             </div>
           </div>
-          
-          {/* View All Link */}
-          <button className="hidden md:flex items-center gap-2 text-yellow-600 hover:text-yellow-700 font-semibold group">
-            <span>Xem tất cả</span>
-            <svg 
-              className="w-5 h-5 transform group-hover:translate-x-1 transition-transform" 
-              fill="none" 
-              viewBox="0 0 24 24" 
-              stroke="currentColor"
-            >
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
-            </svg>
-          </button>
+        
         </div>
 
         {/* Carousel */}

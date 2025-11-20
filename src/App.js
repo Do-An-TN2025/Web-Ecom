@@ -5,6 +5,7 @@ import AppRoutes from "./Routes";
 import Header from "./features/Header/Header";
 import Loading from "./components/Loading";
 import ChatBot from "./features/ChatBot";
+import Footer from "./features/Footer";
 import { WishlistProvider } from "./hooks/useWishlist";
 
 function AppContent() {
@@ -44,6 +45,7 @@ function AppContent() {
       <main className={!isAdminRoute ? 'pt-[40px] md:pt-[60px]' : ''}>
         <AppRoutes />
       </main>
+      {!isAdminRoute && <Footer />}
       {!isAdminRoute && <ChatBot />}
     </div>
   );
