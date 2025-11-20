@@ -395,7 +395,6 @@ export default function OrderManagement() {
       }
       
       handleCloseReview();
-      
       // Optionally refresh orders to update UI
       handleRefresh();
     } catch (err) {
