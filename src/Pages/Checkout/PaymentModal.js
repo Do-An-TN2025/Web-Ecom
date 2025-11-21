@@ -1,4 +1,5 @@
 import React from "react";
+import resolveImage from '../../helpers/imageUtils';
 
 export default function PaymentModal({ open, onClose, selected, onConfirm, options = [] }) {
   const defaultId = selected || (options[0] && options[0].id) || "cod";
@@ -54,7 +55,7 @@ export default function PaymentModal({ open, onClose, selected, onConfirm, optio
 
                 <div className="flex-none w-10 h-10 rounded-lg bg-white border flex items-center justify-center text-xl overflow-hidden">
                   {opt.iconUrl ? (
-                    <img src={opt.iconUrl} alt={opt.id} className="w-8 h-8 object-contain" />
+                    <img src={resolveImage(opt.iconUrl)} alt={opt.id} className="w-8 h-8 object-contain" />
                   ) : opt.icon ? (
                     <span className="text-xl">{opt.icon}</span>
                   ) : null}

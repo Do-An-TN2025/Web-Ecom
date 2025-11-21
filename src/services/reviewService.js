@@ -167,6 +167,28 @@ const reviewService = {
       throw error.response?.data || error;
     }
   },
+
+  /**
+   * Admin: get all reviews with pagination/filtering
+   * @param {number} page
+   * @param {number} limit
+   * @param {object} params - additional query params (q, status, productId, etc.)
+   */
+  getAllReviews: async (page = 1, limit = 20, params = {}) => {
+    try {
+      const response = await axiosInstance.get('/products/reviews', {
+        params: {
+          page,
+          limit,
+          ...params,
+        },
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Get all reviews error:', error);
+      throw error.response?.data || error;
+    }
+  },
 };
 
 export default reviewService;

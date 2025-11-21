@@ -1,4 +1,5 @@
 import { useState, useCallback } from "react";
+import resolveImage from '../../helpers/imageUtils';
 
 export default function SearchResultsMenu({
   results = [],
@@ -47,9 +48,9 @@ export default function SearchResultsMenu({
                 <div className="aspect-square bg-gray-50">
                   {main && (
                     <img
-                      src={main}
-                      onMouseEnter={e => hover && (e.currentTarget.src = hover)}
-                      onMouseLeave={e => main && (e.currentTarget.src = main)}
+                      src={resolveImage(main)}
+                      onMouseEnter={e => hover && (e.currentTarget.src = resolveImage(hover))}
+                      onMouseLeave={e => main && (e.currentTarget.src = resolveImage(main))}
                       alt={p.name}
                       className="h-full w-full object-cover"
                       loading="lazy"

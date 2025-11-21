@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { useWishlist } from "../hooks/useWishlist";
 import { useNavigate } from "react-router-dom";
 import { Heart, ShoppingCart, Trash2, Star, Package } from "lucide-react";
+import resolveImage from '../helpers/imageUtils';
 
 function getMainImage(product) {
   if (Array.isArray(product.variants) && product.variants[0]?.images?.[0]) {
@@ -122,7 +123,7 @@ export default function WishlistPage() {
                 {/* Image Section */}
                 <div className="relative overflow-hidden bg-gray-100 aspect-square">
                   <img
-                    src={mainImage}
+                    src={resolveImage(mainImage)}
                     alt={product.name || "Sản phẩm"}
                     className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     onError={(e) => {

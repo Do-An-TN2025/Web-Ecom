@@ -12,6 +12,7 @@ import {
 } from "../services/AuthService";
 import { useNavigate } from "react-router-dom";
 import { toast } from "react-toastify";
+import resolveImage from '../helpers/imageUtils';
 
 const Field = ({ label, children, hint, error }) => (
   <div className="space-y-1">
@@ -239,15 +240,9 @@ const logout = () => {
         {/* Sidebar */}
         <aside className="md:col-span-1 space-y-6">
           <div className="bg-white rounded-2xl border p-5 flex flex-col items-center text-center shadow-sm">
-            <div className="relative">
+              <div className="relative">
               <img
-                src={
-                  form.avatar ||
-                  "https://ui-avatars.com/api/?name=" +
-                    encodeURIComponent(
-                      `${form.firstName || ""} ${form.lastName || ""}`.trim() || "U"
-                    )
-                }
+                src={resolveImage(form.avatar || (`https://ui-avatars.com/api/?name=${encodeURIComponent(`${form.firstName || ""} ${form.lastName || ""}`.trim() || "U")}`))}
                 alt="avatar"
                 className="w-24 h-24 rounded-full object-cover border shadow-sm"
               />
@@ -367,7 +362,7 @@ const logout = () => {
                 {form.avatar && (
                   <div className="md:col-span-2 flex items-center gap-4 pt-2">
                     <img
-                      src={form.avatar}
+                      src={resolveImage(form.avatar)}
                       alt="avatar preview"
                       className="w-16 h-16 rounded-full object-cover border"
                     />

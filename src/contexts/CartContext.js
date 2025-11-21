@@ -1,4 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from "react";
+import { toast } from "react-toastify";
 import CartService from "../services/CartService";
 
 const STORAGE_KEY = "app_cart_v1";
@@ -211,7 +212,8 @@ export const CartProvider = ({ children }) => {
   /* -------------------------
      addItem: optimistic + dedupe + server sync
      ------------------------- */
-  const addItem = useCallback((payload) => {
+  const addItem = useCallback((payload, options = {}) => {
+    const { throwOnError = false } = options || {};
     const safe = { qty: 1, ...payload };
     safe.key =
       safe.key ||
@@ -219,9 +221,17 @@ export const CartProvider = ({ children }) => {
 
     const qtyToAdd = Number(safe.qty ?? safe.quantity ?? 1) || 1;
     let snapshotAfterOptimistic = [];
+    let prevSnapshot = null;
+    let aborted = false;
 
     // optimistic update (functional to avoid stale)
     setItems((prev) => {
+      try {
+        // capture previous server-authoritative snapshot (non-summed) for potential revert
+        prevSnapshot = dedupeItems(prev.map(normalizeItem), { sum: false });
+      } catch (e) {
+        prevSnapshot = null;
+      }
       try {
         console.debug("[CartContext.addItem] before optimistic, prev:", JSON.parse(JSON.stringify(prev)), "payload:", JSON.parse(JSON.stringify(safe)));
       } catch (e) {
@@ -236,8 +246,34 @@ export const CartProvider = ({ children }) => {
             (it.size || "") === (safe.size || ""))
       );
 
+      // determine available stock from payload or existing item if present
+      const existing = idx > -1 ? normalizedPrev[idx] : null;
+      const availableStock = Number(
+        safe.stock ?? safe.variant?.stock ?? safe.product?.stock ?? existing?.stock ?? existing?.available ?? existing?.count ?? Infinity
+      );
+
+      const existingQty = Number(existing?.qty ?? 0);
+      if (Number.isFinite(availableStock) && existingQty + qtyToAdd > availableStock) {
+        // do not perform optimistic update -- abort and log
+        const msg = `[CartContext.addItem] Requested qty ${existingQty + qtyToAdd} for ${safe.productId || safe.key} exceeds stock ${availableStock}`;
+        console.error(msg);
+        try {
+          if (typeof window !== 'undefined' && typeof window.dispatchEvent === 'function') {
+            window.dispatchEvent(new CustomEvent('cart:error', { detail: { message: 'Exceeds stock', code: 'EXCEEDS_STOCK', productId: safe.productId || safe.key, requested: existingQty + qtyToAdd, available: availableStock } }));
+          }
+          try {
+            toast.warn('Số lượng yêu cầu vượt quá tồn kho', { toastId: 'exceeds-stock' });
+          } catch (e) {
+            console.error('[CartContext.addItem] toast.warn failed', e);
+          }
+        } catch (e) {
+          console.error('[CartContext.addItem] dispatch cart:error failed', e);
+        }
+        aborted = true;
+        return prev;
+      }
+
       if (idx > -1) {
-        const existing = normalizedPrev[idx];
         const updatedQty = Number(existing.qty || 0) + qtyToAdd;
         normalizedPrev[idx] = { ...existing, ...safe, qty: updatedQty, quantity: updatedQty };
       } else {
@@ -256,6 +292,12 @@ export const CartProvider = ({ children }) => {
     // writing again causes duplicate increments (optimistic write +
     // service increment). So we only keep the optimistic state update
     // (setItems) and let CartService persist the final state.
+    if (aborted) {
+      // return an error shape or reject based on options
+      const err = { message: "Exceeds stock" };
+      if (throwOnError) return Promise.reject(err);
+      return Promise.resolve({ ok: false, error: err });
+    }
 
     // call server and reconcile
     return (async () => {
@@ -277,7 +319,33 @@ export const CartProvider = ({ children }) => {
         return res;
       } catch (err) {
         console.error("[CartContext] addItem error", err);
-        throw err;
+        // revert optimistic change so UI doesn't keep the increased qty when API failed
+        try {
+          if (prevSnapshot) setItems(prevSnapshot);
+        } catch (e) {
+          console.error('[CartContext.addItem] revert failed', e);
+        }
+        try {
+          const serverMsg = (err && (err.message || (err.response && err.response.data && err.response.data.message))) || "";
+          if (String(serverMsg).toLowerCase().includes('exceed')) {
+            try {
+              toast.warn('Số lượng yêu cầu vượt quá tồn kho', { toastId: 'exceeds-stock' });
+            } catch (e) {
+              console.error('[CartContext.addItem] toast.warn failed', e);
+            }
+          } else {
+            const msg = serverMsg || "Không thể thêm vào giỏ hàng";
+            try {
+              toast.error(msg, { toastId: 'cart-add-error' });
+            } catch (e) {
+              console.error('[CartContext] toast show error', e);
+            }
+          }
+        } catch (e) {
+          console.error('[CartContext.addItem] message handling failed', e);
+        }
+        if (throwOnError) throw err;
+        return { ok: false, error: err };
       }
     })();
   }, []);
@@ -287,10 +355,13 @@ export const CartProvider = ({ children }) => {
      ------------------------- */
   const updateQty = useCallback((keyOrId, qty) => {
     const numericQty = Number(qty) || 0;
-
+    // capture previous snapshot so we can revert if server rejects
+    let prevSnapshot = null;
     // optimistic update
     setItems((prev) => {
       const normalizedPrev = prev.map(normalizeItem);
+      // store a copy of previous state for potential revert
+      prevSnapshot = dedupeItems(normalizedPrev, { sum: false });
       if (numericQty <= 0) {
         return normalizedPrev.filter((it) => !(it.key === keyOrId || String(it._id) === String(keyOrId)));
       }
@@ -324,7 +395,28 @@ export const CartProvider = ({ children }) => {
         }
         return res;
       } catch (err) {
-        console.error("[CartContext] updateQty error", err);
+        console.error("[CartContext] updateQty error", err.message  || err);
+        // If the server explicitly says quantity exceeds stock, show a toast and
+        // return a non-throwing error shape so callers don't get an uncaught rejection.
+        try {
+          const msg = err && (err.message || (err.response && err.response.data && err.response.data.message)) || "Không thể cập nhật số lượng";
+          if (String(msg).toLowerCase().includes("exceeds stock") || String(msg).toLowerCase().includes("exceed")) {
+            // revert optimistic change so UI shows original quantity
+            try {
+              if (prevSnapshot) setItems(prevSnapshot);
+            } catch (e) {
+              console.error('[CartContext.updateQty] revert failed', e);
+            }
+            try {
+              toast.warn('Số lượng yêu cầu vượt quá tồn kho', { toastId: 'exceeds-stock' });
+            } catch (e) {
+              console.error('[CartContext.updateQty] toast failed', e);
+            }
+            return { ok: false, error: err };
+          }
+        } catch (e) {
+          console.error('[CartContext.updateQty] message handling failed', e);
+        }
         throw err;
       }
     })();

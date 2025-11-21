@@ -4,6 +4,7 @@ import { Package, Truck, CheckCircle, XCircle, Clock, Search, Eye, AlertCircle, 
 import { toast } from "react-toastify";
 import orderService from "../services/orderService";
 import reviewService from "../services/reviewService";
+import resolveImage from '../helpers/imageUtils';
 
 // Component hiển thị trạng thái
 function OrderStatusBadge({ status }) {
@@ -126,10 +127,10 @@ function ReviewModal({ order, isOpen, onClose, onSubmit }) {
                 <div key={idx} className="border border-gray-200 rounded-lg p-4">
                   <div className="flex gap-4 mb-3">
                     <img
-                      src={item.image || '/placeholder.jpg'}
-                      alt={item.name}
-                      className="w-16 h-16 object-cover rounded border border-gray-200"
-                    />
+                        src={resolveImage(item.image || item.productId?.images?.[0] || '/placeholder.jpg')}
+                        alt={item.name}
+                        className="w-16 h-16 object-cover rounded border border-gray-200"
+                      />
                     <div className="flex-1 min-w-0">
                       <h4 className="text-sm font-medium text-gray-900 line-clamp-2 mb-1">
                         {item.name}
@@ -212,7 +213,7 @@ function OrderRow({ order, onViewDetail, onReview }) {
                 {/* Product Image */}
                 <div className="w-20 h-20 flex-shrink-0">
                   <img 
-                    src={item.image || '/placeholder.jpg'} 
+                    src={resolveImage(item.image || item.productId?.images?.[0] || '/placeholder.jpg')}
                     alt={item.name}
                     className="w-full h-full object-cover rounded border border-gray-200"
                   />

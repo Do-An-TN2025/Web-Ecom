@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useCallback, useEffect } fr
 import { createPortal } from "react-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { Link } from "react-router-dom";
+import resolveImage from '../helpers/imageUtils';
 
 const CartToastCtx = createContext(null);
 
@@ -14,7 +15,12 @@ export const CartToastProvider = ({ children }) => {
 
   const showAdded = useCallback((payload) => {
     const id = Date.now() + Math.random();
-    setToasts((t) => [...t, { id, ...payload }]);
+    const dedupeKey = `${payload.name}::${payload.colorLabel || ''}::${payload.size || ''}`;
+    setToasts((t) => {
+      // if a toast for the same product+size+color already exists, don't add another
+      if ((t || []).some((x) => x.dedupeKey === dedupeKey)) return t;
+      return [...t, { id, dedupeKey, ...payload }];
+    });
     setTimeout(() => hide(id), 2000);
   }, [hide]);
 
@@ -35,7 +41,7 @@ export const CartToastProvider = ({ children }) => {
               >
                 <div className="flex items-start gap-3 p-3">
                   <img
-                    src={t.image}
+                    src={resolveImage(t.image)}
                     alt={t.name}
                     className="w-16 h-16 object-cover rounded-lg border"
                   />

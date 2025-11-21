@@ -29,10 +29,27 @@ async function apiFetch(path, opts = {}) {
     headers,
   });
   if (!res.ok) {
-    const txt = await res.text().catch(() => "");
-    const err = new Error(res.statusText || "API error");
+    // try parse json first to extract server message
+    let parsed = null;
+    let txt = "";
+    try {
+      parsed = await res.json().catch(() => null);
+    } catch (e) {
+      parsed = null;
+    }
+    if (!parsed) {
+      txt = await res.text().catch(() => "");
+    }
+
+    const msg = (parsed && (parsed.message || parsed.error || parsed.msg)) || txt || res.statusText || "API error";
+    try {
+      console.error('[CartService.apiFetch] API error:', msg);
+    } catch (e) {
+      // ignore logging errors
+    }
+    const err = new Error(msg);
     err.status = res.status;
-    err.body = txt;
+    err.body = parsed || txt;
     throw err;
   }
   return res.json().catch(() => null);

@@ -1,9 +1,11 @@
 import { useState, useMemo, useEffect, useRef } from "react";
+import { toast } from "react-toastify";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronLeft, ChevronRight, Star, Package, RotateCcw, Truck } from "lucide-react";
 import { useCart } from "../../contexts/CartContext";
 import { useCartToast } from "../../hooks/CartAddNotifier";
 import { getRecentlyViewedProducts } from "../../services/productService";
+import resolveImage from '../../helpers/imageUtils';
 
 const COLOR_MAP = {
   navy: "Xanh Navy",
@@ -35,6 +37,7 @@ export default function ProductDetailView({ product }) {
   const [quantity, setQuantity] = useState(1);
   const [imageIndex, setImageIndex] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
+  const isAddingRef = useRef(false);
   const [activeTab, setActiveTab] = useState("description"); // description | shipping | returns
   const images = selectedColor.images || [];
 
@@ -192,7 +195,67 @@ export default function ProductDetailView({ product }) {
 
   const handleAddToCart = async () => {
     if (!selectedSizeObj) return;
-    if (isAdding) return; 
+    if (isAddingRef.current) return;
+    // Client-side stock check for guests (no API call) — show a single Vietnamese toast and abort
+    try {
+      const availableStock = Number(
+        selectedSizeObj.stock ?? selectedSizeObj.available ?? selectedSizeObj.count ?? Infinity
+      );
+
+      // If requested qty alone exceeds stock, abort immediately
+      if (Number.isFinite(availableStock) && Number(quantity) > availableStock) {
+        try {
+          toast.warn("Số lượng yêu cầu vượt quá tồn kho", { toastId: "exceeds-stock" });
+        } catch (e) {
+          console.error('[ProductDetailView] toast.warn failed', e);
+        }
+        return;
+      }
+
+      // Additionally, if user is a guest the cart may be stored in localStorage under 'app_cart_v1'.
+      // Check existing quantity in that local cart and warn if existing + requested > stock.
+      try {
+        const LS_KEY = "app_cart_v1";
+        if (typeof window !== "undefined") {
+          const raw = localStorage.getItem(LS_KEY);
+          if (raw) {
+            let parsed = [];
+            try {
+              parsed = JSON.parse(raw);
+            } catch (e) {
+              parsed = [];
+            }
+            const itemsArr = Array.isArray(parsed)
+              ? parsed
+              : Array.isArray(parsed?.items)
+              ? parsed.items
+              : [];
+
+            const pendingKey = `${product._id}-${selectedColor._id}-${selectedSizeCode}`;
+            const existing = (itemsArr || []).find(
+              (it) =>
+                it?.key === pendingKey ||
+                (it?.productId === product._id && it?.variantId === selectedColor._id && it?.size === selectedSizeCode)
+            );
+            const existingQty = Number(existing?.qty ?? existing?.quantity ?? 0);
+            if (Number.isFinite(availableStock) && existingQty + Number(quantity) > availableStock) {
+              try {
+                toast.warn("Số lượng yêu cầu vượt quá tồn kho", { toastId: "exceeds-stock" });
+              } catch (e) {
+                console.error('[ProductDetailView] toast.warn failed', e);
+              }
+              return;
+            }
+          }
+        }
+      } catch (e) {
+        console.error('[ProductDetailView] localStorage stock check failed', e);
+      }
+    } catch (e) {
+      console.error('[ProductDetailView] stock check failed', e);
+    }
+    // set immediate lock to prevent rapid double-clicks
+    isAddingRef.current = true;
     setIsAdding(true);
 
     const basePrice = selectedSizeObj.price || selectedSizeObj.finalPrice || 0;
@@ -242,7 +305,7 @@ export default function ProductDetailView({ product }) {
           it.key === cartItem.key ||
           (it.productId === cartItem.productId &&
             it.variantId === cartItem.variantId &&
-            (it.size || it.size === cartItem.size))
+            (it.size === cartItem.size))
       );
 
       // fallback: try read cart snapshot from localStorage (adjust key if your CartContext uses different key)
@@ -257,7 +320,7 @@ export default function ProductDetailView({ product }) {
                 it.key === cartItem.key ||
                 (it.productId === cartItem.productId &&
                   it.variantId === cartItem.variantId &&
-                  (it.size || it.size === cartItem.size))
+                  (it.size === cartItem.size))
             );
             console.debug("[AddCart] found existing in localStorage fallback:", existing);
           }
@@ -290,6 +353,7 @@ export default function ProductDetailView({ product }) {
     } catch (err) {
       console.error("[ProductDetailView] add/update cart failed", err);
     } finally {
+      isAddingRef.current = false;
       setIsAdding(false);
     }
   };
@@ -315,7 +379,7 @@ export default function ProductDetailView({ product }) {
                 aria-current={imageIndex === idx}
               >
                 <img
-                  src={img}
+                  src={resolveImage(img)}
                   alt={`${product.name} thumb ${idx + 1}`}
                   className="h-20 w-16 object-cover md:h-full md:w-full"
                   loading={idx > 4 ? "lazy" : "eager"}
@@ -328,9 +392,7 @@ export default function ProductDetailView({ product }) {
             <AnimatePresence mode="wait">
               <motion.img
                 key={imageIndex}
-                src={
-                  images[imageIndex] || product.thumbnail || "/placeholder.jpg"
-                }
+                src={resolveImage(images[imageIndex] || product.thumbnail)}
                 alt={product.name}
                 className="h-full w-full object-cover"
                 initial={{ opacity: 0, x: 40 }}

@@ -3,6 +3,7 @@ import { ShoppingCart, TrendingUp, Star } from 'lucide-react';
 import { getBestSellers } from '../../services/productService';
 import { useCart } from '../../contexts/CartContext';
 import { useCartToast } from '../../hooks/CartAddNotifier';
+import resolveImage from '../../helpers/imageUtils';
 
 function ProductCard({ product, onAdd, index }) {
   const [isHovered, setIsHovered] = useState(false);
@@ -44,7 +45,7 @@ function ProductCard({ product, onAdd, index }) {
           </div>
         )}
         <img 
-          src={product.images?.[0] || '/placeholder.jpg'} 
+          src={resolveImage(product.images?.[0] || product.thumbnail)}
           alt={product.name}
           onLoad={() => setImageLoaded(true)}
           className={`w-full h-full object-cover transition-all duration-500 ${
@@ -180,7 +181,7 @@ export default function BestSellers({ limit = 8, days = 90, autoPlay = true }) {
         price: product.finalPrice || 0,
         finalPrice: product.finalPrice || 0,
         name: product.name,
-        image: (product.images && product.images[0]) || '/placeholder.jpg',
+        image: (product.images && product.images[0]) || product.thumbnail || '/placeholder.jpg',
         product: { _id: product._id, title: product.name, slug: product.slug },
       };
       await addItem(cartItem);
@@ -188,7 +189,7 @@ export default function BestSellers({ limit = 8, days = 90, autoPlay = true }) {
       // Show toast
       try {
         toast?.showAdded?.({
-          image: (product.images && product.images[0]) || '/placeholder.jpg',
+          image: (product.images && product.images[0]) || product.thumbnail || '/placeholder.jpg',
           name: product.name,
           price: product.finalPrice || 0,
           qty: 1,

@@ -1,6 +1,8 @@
 import React, { useState, useMemo, useEffect } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useCart } from "../../contexts/CartContext";
+import { toast } from "react-toastify";
+import resolveImage from "../../helpers/imageUtils";
 
 const formatCurrency = (v = 0) =>
   v.toLocaleString("vi-VN", { minimumFractionDigits: 0 }) + "đ";
@@ -79,6 +81,9 @@ export default function Cart() {
       console.log("names", name);
       const color = it.color || it.variant?.color || "";
       const size = it.size || it.variant?.sizeInfo?.size || "";
+      const availableStock = Number(
+        it.stock ?? it.variant?.sizeInfo?.stock ?? it.variant?.stock ?? it.variant?.sizeInfo?.available ?? it.variant?.available ?? it.product?.stock ?? it.available ?? it.count ?? Infinity
+      );
       return {
         ...it,
         id,
@@ -88,10 +93,33 @@ export default function Cart() {
         name,
         color,
         size,
+        availableStock,
         lineTotal: price * qty
       };
     });
   }, [items]);
+
+  // local input state per item to avoid losing typed digits while editing
+  const [qtyInputs, setQtyInputs] = useState({});
+  const [focusedInput, setFocusedInput] = useState(null);
+  const [updatingIds, setUpdatingIds] = useState(new Set());
+  const updatingIdsRef = React.useRef(new Set());
+
+  useEffect(() => {
+    // sync normalized qty -> local inputs when not editing
+    setQtyInputs((prev) => {
+      const next = {};
+      normalized.forEach((it) => {
+        if (focusedInput === it.id && prev[it.id]) {
+          next[it.id] = prev[it.id];
+        } else {
+          next[it.id] = { value: String(it.qty || 1), error: "" };
+        }
+      });
+      return next;
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [normalized, focusedInput]);
 
   // selection state (default: select all)
   const [selectedIds, setSelectedIds] = useState(new Set());
@@ -183,9 +211,9 @@ export default function Cart() {
                     <RoundCheckbox checked={selectedIds.has(it.id)} onChange={() => toggleSelect(it.id)} ariaLabel={`Chọn ${it.name}`} />
                   </div>
 
-                  <div className="flex-shrink-0 w-full md:w-28 h-28 md:h-28 rounded-lg bg-gray-100 border overflow-hidden flex items-center justify-center">
+                    <div className="flex-shrink-0 w-full md:w-28 h-28 md:h-28 rounded-lg bg-gray-100 border overflow-hidden flex items-center justify-center">
                     <img
-                      src={it.image}
+                      src={resolveImage(it.image)}
                       alt={it.name}
                       className="w-full h-full object-cover"
                       loading="lazy"
@@ -214,23 +242,104 @@ export default function Cart() {
                     <div className="mt-3 flex items-center gap-3">
                       <div className="flex items-center border rounded-full overflow-hidden">
                         <button
-                          onClick={() => decrementItem(it.id)}
-                          className={`px-3 py-1 sm:px-4 sm:py-2 text-lg font-medium hover:bg-gray-100`}
+                          onClick={async () => {
+                            if (updatingIdsRef.current.has(it.id)) return;
+                            // lock immediately via ref and reflect in state
+                            updatingIdsRef.current.add(it.id);
+                            setUpdatingIds(new Set(updatingIdsRef.current));
+                            try {
+                              await decrementItem(it.id);
+                            } catch (e) {
+                              console.error('[Cart] decrement threw', e);
+                            } finally {
+                              updatingIdsRef.current.delete(it.id);
+                              setUpdatingIds(new Set(updatingIdsRef.current));
+                            }
+                          }}
+                          className={`px-3 py-1 sm:px-4 sm:py-2 text-lg font-medium hover:bg-gray-100 ${updatingIds.has(it.id) ? 'opacity-60 cursor-wait' : ''}`}
                           aria-label="Giảm số lượng"
+                          disabled={updatingIds.has(it.id)}
                         >
                           −
                         </button>
-                        <span className="px-4 py-1 text-sm sm:px-6 sm:py-2 font-semibold">
-                          {it.qty}
-                        </span>
+                        <input
+                          type="number"
+                          min={1}
+                          step={1}
+                          value={(qtyInputs[it.id] && qtyInputs[it.id].value) ?? String(it.qty)}
+                          onChange={(e) => {
+                            const raw = e.target.value;
+                            // keep only digits to let user type; allow empty
+                            const filtered = raw.replace(/[^0-9]/g, "");
+                            setQtyInputs((p) => ({ ...p, [it.id]: { ...(p[it.id] || {}), value: filtered, error: "" } }));
+                          }}
+                          onFocus={() => setFocusedInput(it.id)}
+                          onBlur={() => {
+                            setFocusedInput(null);
+                            const local = qtyInputs[it.id] && qtyInputs[it.id].value;
+                            const parsed = parseInt(local, 10);
+                            const next = Number.isFinite(parsed) && parsed > 0 ? parsed : 1;
+                            if (Number.isFinite(it.availableStock) && next > it.availableStock) {
+                              // log error and show inline message; do not update server
+                              console.error(`Requested qty ${next} for ${it.name} exceeds stock ${it.availableStock}`);
+                              setQtyInputs((p) => ({ ...p, [it.id]: { ...(p[it.id] || {}), value: String(it.qty), error: `Chỉ còn ${it.availableStock} trong kho` } }));
+                                try {
+                                  toast.warn('Số lượng yêu cầu vượt quá tồn kho', { toastId: 'exceeds-stock' });
+                                } catch (e) {
+                                  console.error('[Cart] toast.warn failed', e);
+                                }
+                            } else {
+                              updateQty(it.id, next);
+                              setQtyInputs((p) => ({ ...p, [it.id]: { ...(p[it.id] || {}), value: String(next), error: "" } }));
+                            }
+                          }}
+                          onKeyDown={(e) => {
+                            if (e.key === "Enter") {
+                              e.currentTarget.blur();
+                            }
+                          }}
+                          className={`w-20 text-center px-2 py-1 text-sm sm:px-6 sm:py-2 font-semibold outline-none ${qtyInputs[it.id] && qtyInputs[it.id].error ? 'ring-1 ring-red-300 bg-red-50 text-red-700' : ''}`}
+                          aria-label={`Số lượng ${it.name}`}
+                        />
                         <button
-                          onClick={() => updateQty(it.id, it.qty + 1)}
-                          className="px-3 py-1 sm:px-4 sm:py-2 text-lg font-medium hover:bg-gray-100"
+                          onClick={async () => {
+                            if (updatingIdsRef.current.has(it.id)) return;
+                            const next = it.qty + 1;
+                            if (Number.isFinite(it.availableStock) && next > it.availableStock) {
+                              console.error(`Cannot increase qty to ${next} for ${it.name}: exceeds stock ${it.availableStock}`);
+                              setQtyInputs((p) => ({ ...p, [it.id]: { ...(p[it.id] || {}), error: `Chỉ còn ${it.availableStock} trong kho` } }));
+                              try {
+                                // ensure a single toast as well
+                                toast.warn('Số lượng yêu cầu vượt quá tồn kho', { toastId: 'exceeds-stock' });
+                              } catch (e) {}
+                              return;
+                            }
+                            // lock immediately
+                            updatingIdsRef.current.add(it.id);
+                            setUpdatingIds(new Set(updatingIdsRef.current));
+                            try {
+                              const res = await updateQty(it.id, next);
+                              if (res && res.ok === false) {
+                                setQtyInputs((p) => ({ ...p, [it.id]: { ...(p[it.id] || {}), value: String(it.qty), error: '' } }));
+                              }
+                            } catch (e) {
+                              console.error('[Cart] updateQty threw', e);
+                            } finally {
+                              updatingIdsRef.current.delete(it.id);
+                              setUpdatingIds(new Set(updatingIdsRef.current));
+                            }
+                          }}
+                          className={`px-3 py-1 sm:px-4 sm:py-2 text-lg font-medium hover:bg-gray-100 ${updatingIds.has(it.id) ? 'opacity-60 cursor-wait' : ''}`}
                           aria-label="Tăng số lượng"
+                          disabled={updatingIds.has(it.id)}
                         >
-                          +
+                          {updatingIds.has(it.id) ? '…' : '+'}
                         </button>
                       </div>
+
+                      {qtyInputs[it.id] && qtyInputs[it.id].error && (
+                        <div className="text-xs text-red-500 ml-3">{qtyInputs[it.id].error}</div>
+                      )}
 
                       <div className="ml-auto text-right">
                         <p className="text-sm sm:text-base font-bold text-yellow-600">

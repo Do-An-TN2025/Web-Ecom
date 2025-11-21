@@ -4,6 +4,7 @@ import { useCart } from "../contexts/CartContext";
 import PaymentModal from "./Checkout/PaymentModal";
 import CouponModal from "./Checkout/CouponModal";
 import ShippingForm from "./Checkout/ShippingForm";
+import resolveImage from '../helpers/imageUtils';
 
 const ICONS = {
   cod: "https://buggy.yodycdn.com/images/assets/method_cod.webp",
@@ -568,7 +569,7 @@ export default function CheckoutPage() {
                   const price = it.finalPrice ?? it.price ?? 0;
                   return (
                     <li key={it.key || it._id || `${it.productId}-${it.variantId}-${it.size}`} className="flex items-center gap-4">
-                      <img src={it.variant.images || "/placeholder.jpg"} alt={it.name || "sp"} className="w-20 h-20 object-cover rounded-lg border" />
+                      <img src={resolveImage(it.variant?.images || it.image || it.product?.thumbnail)} alt={it.name || "sp"} className="w-20 h-20 object-cover rounded-lg border" />
                       <div className="flex-1 min-w-0">
                         <div className="text-sm font-medium line-clamp-2">{it.name || it.product?.title}</div>
                         <div className="text-xs text-gray-500 mt-1">Size: {it.size || "-"} · Số lượng: {qty}</div>
@@ -614,7 +615,7 @@ export default function CheckoutPage() {
                 <button onClick={() => setOpenPaymentModal(true)} className="w-full flex items-center justify-between gap-3 p-3 rounded-xl border hover:shadow-sm bg-white">
                   <div className="flex items-center gap-3">
                     <div className="w-9 h-9 rounded-lg bg-gray-50 flex items-center justify-center overflow-hidden">
-                      {selectedPaymentOption?.iconUrl ? <img src={selectedPaymentOption.iconUrl} alt={selectedPaymentOption.id} className="w-7 h-7 object-contain" /> : <div className="w-7 h-7 flex items-center justify-center text-gray-700">💳</div>}
+                      {selectedPaymentOption?.iconUrl ? <img src={resolveImage(selectedPaymentOption.iconUrl)} alt={selectedPaymentOption.id} className="w-7 h-7 object-contain" /> : <div className="w-7 h-7 flex items-center justify-center text-gray-700">💳</div>}
                     </div>
                     <div className="text-left">
                       <div className="text-sm font-medium text-gray-800">{selectedPaymentOption?.label || paymentMethod}</div>

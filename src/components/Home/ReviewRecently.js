@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
+import resolveImage from '../../helpers/imageUtils';
 import reviewService from '../../services/reviewService';
 
 const ReviewCard = ({ item }) => {
@@ -20,7 +21,7 @@ const ReviewCard = ({ item }) => {
           <div className="flex items-center gap-3">
             <div className="w-10 h-10 flex items-center justify-center bg-gray-100 rounded-full overflow-hidden">
               {avatar ? (
-                <img src={avatar} alt={name} className="w-full h-full object-cover" />
+                <img src={resolveImage(avatar)} alt={name} className="w-full h-full object-cover" />
               ) : (
                 <div className="text-sm font-medium text-gray-700">{name.charAt(0).toUpperCase()}</div>
               )}

@@ -1,28 +1,31 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Package, Truck, CheckCircle, XCircle, Clock, MapPin, CreditCard, Tag, ArrowLeft, FileText, User, Home } from 'lucide-react';
-import { getOrderByCode } from '../services/orderService';
+import { Package, Truck, CheckCircle, XCircle, Clock, MapPin, CreditCard, Tag, ArrowLeft, FileText, User } from 'lucide-react';
+import { getOrderByCode, reportOrder } from '../services/orderService';
+import { toast } from 'react-toastify';
+import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
+import resolveImage from '../helpers/imageUtils';
 
 function OrderTimeline({ currentStatus }) {
   const steps = [
-    { key: 'confirmed', label: 'Xác nhận', icon: CheckCircle },
-    { key: 'shipped', label: 'Đã gửi', icon: Package },
+    { key: 'pending', label: 'Chờ xử lý', icon: Clock },
+    { key: 'processing', label: 'Đang xử lý', icon: Truck },
     { key: 'shipping', label: 'Đang giao', icon: Truck },
-    { key: 'delivered', label: 'Đã giao', icon: Home },
+    { key: 'completed', label: 'Hoàn thành', icon: CheckCircle },
   ];
 
-  // Map status to step index
   const getCompletedSteps = (status) => {
-    switch(status) {
+    switch (status) {
       case 'pending':
-      case 'paid':
-        return 0; // Xác nhận
-      case 'shipped':
-        return 1; // Xác nhận + Đã gửi
+        return 0;
+      case 'processing':
+        return 1;
+      case 'shipping':
+        return 2;
       case 'delivered':
-        return 2; // Xác nhận + Đã gửi + Đang giao
+        return 2;
       case 'completed':
-        return 3; // Tất cả
+        return 3;
       default:
         return -1;
     }
@@ -44,30 +47,28 @@ function OrderTimeline({ currentStatus }) {
   return (
     <div className="bg-white rounded-lg border border-gray-200 p-6 mb-4">
       <div className="relative">
-        {/* Progress Line */}
         <div className="absolute top-5 left-0 right-0 h-1 bg-gray-200 mx-8">
-          <div 
+          <div
             className="h-full bg-green-500 transition-all duration-500"
-            style={{ 
+            style={{
               width: completedSteps >= 0 ? `${(completedSteps / (steps.length - 1)) * 100}%` : '0%'
             }}
           />
         </div>
 
-        {/* Steps */}
         <div className="relative grid grid-cols-4 gap-4">
           {steps.map((step, index) => {
             const StepIcon = step.icon;
             const isCompleted = index <= completedSteps;
-            
+
             return (
               <div key={step.key} className="flex flex-col items-center">
-                {/* Icon Circle */}
-                <div className={`w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${
-                  isCompleted 
-                    ? 'bg-green-500 text-white' 
-                    : 'bg-gray-200 text-gray-400'
-                }`}>
+                <div
+                  className={`w-10 h-10 rounded-full flex items-center justify-center z-10 transition-all duration-300 ${
+                    isCompleted
+                      ? 'bg-green-500 text-white'
+                      : 'bg-gray-200 text-gray-400'
+                  }`}>
                   {isCompleted ? (
                     <CheckCircle size={20} fill="white" strokeWidth={0} />
                   ) : (
@@ -263,7 +264,7 @@ export default function OrderDetail() {
                   <div key={idx} className="p-4 flex gap-4">
                     <div className="w-20 h-20 bg-gray-50 rounded-lg overflow-hidden flex-shrink-0 border border-gray-200">
                       <img
-                        src={item.image || item.productId?.images?.[0] || '/placeholder.jpg'}
+                        src={resolveImage(item.image || item.productId?.images?.[0] || item.productId?.thumbnail)}
                         alt={item.name}
                         className="w-full h-full object-cover"
                       />

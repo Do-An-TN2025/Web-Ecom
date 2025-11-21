@@ -162,6 +162,53 @@ export async function updateOrderStatusAdmin(id, body = {}, token) {
   return handleResponse(res);
 }
 
+// report an order (user requests cancellation/report)
+export async function reportOrder(id, body = {}, token) {
+  if (!token) throw new Error("Token required");
+  const res = await fetch(`${API_URL}/orders/${encodeURIComponent(id)}/report`, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader(token),
+    },
+    body: JSON.stringify(body),
+  });
+  return handleResponse(res);
+}
+
+// admin: get order reports (paginated/filterable)
+export async function getOrderReportsAdmin(query = {}, token) {
+  if (!token) throw new Error("Token required");
+  const params = new URLSearchParams();
+  Object.keys(query || {}).forEach((k) => {
+    const v = query[k];
+    if (v !== undefined && v !== null && v !== "") params.set(k, String(v));
+  });
+  const url = `${API_URL}/orders/admin/reports${params.toString() ? `?${params.toString()}` : ""}`;
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader(token),
+    },
+  });
+  return handleResponse(res);
+}
+
+// admin: approve a report
+export async function approveOrderReport(reportId, body = {}, token) {
+  if (!token) throw new Error("Token required");
+  const res = await fetch(`${API_URL}/orders/admin/reports/${encodeURIComponent(reportId)}/approve`, {
+    method: "PATCH",
+    headers: {
+      "Content-Type": "application/json",
+      ...authHeader(token),
+    },
+    body: JSON.stringify(body),
+  });
+  return handleResponse(res);
+}
+
 export default {
   createOrder,
   checkPaymentStatus,
@@ -171,4 +218,7 @@ export default {
   pollPaymentStatus,
   getOrdersAdmin,
   updateOrderStatusAdmin,
+  reportOrder,
+  getOrderReportsAdmin,
+  approveOrderReport,
 };
