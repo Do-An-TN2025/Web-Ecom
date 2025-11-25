@@ -17,6 +17,7 @@ import Order from '../Pages/Order';
 import OrderDetail from '../Pages/OrderDetail';
 import OrdersAdmin from '../Pages/admin/OrdersAdmin';
 import Review from '../components/Admin/Review';
+import Reported from '../components/Admin/Reported';
 const AppRoutes = () => {
   return (
     <Routes>
@@ -36,6 +37,7 @@ const AppRoutes = () => {
       <Route path="/admin/vouchers" element={<Voucher />} />
       <Route path="/admin/orders" element={<OrdersAdmin />} />
       <Route path="/admin/reviews" element={<Review />} />
+     <Route path="/admin/reports" element={<Reported />} />
       <Route path="*" element={<NotFound />} />
     </Routes>
   );

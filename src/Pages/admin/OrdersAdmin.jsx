@@ -47,7 +47,7 @@ import { getOrdersAdmin, updateOrderStatusAdmin } from "../../services/orderServ
 /**
  * Enum các trạng thái đơn (Backend / model)
  */
-const ORDER_ENUM = ["pending", "confirmed", "shipped", "delivered", "cancelled", "completed"];
+const ORDER_ENUM = ["pending", "confirmed", "shipped", "delivered", "cancelled", "completed", "reported"];
 
 const ORDER_STATUS = [
   { key: "pending", label: "Chờ xử lý" },
@@ -56,6 +56,7 @@ const ORDER_STATUS = [
   { key: "delivered", label: "Đã giao" },
   { key: "cancelled", label: "Đã huỷ" },
   { key: "completed", label: "Hoàn tất" },
+  { key: "reported", label: "Đã báo cáo" },
 ];
 
 const PAYMENT_LABEL = {
@@ -76,7 +77,7 @@ const TAB_CONFIG = [
   { value: "completed", label: "Hoàn tất" },
   { value: "cancelled", label: "Đã huỷ" },
   { value: "paid", label: "Đã thanh toán" },
-  { value: "problems", label: "Có vấn đề", color: "warning" },
+  { value: "reported", label: "Có vấn đề", color: "warning" },
 ];
 
 function paymentLabel(s) {

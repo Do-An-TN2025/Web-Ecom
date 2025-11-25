@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { Package, Truck, CheckCircle, XCircle, Clock, MapPin, CreditCard, Tag, ArrowLeft, FileText, User } from 'lucide-react';
-import { getOrderByCode, reportOrder } from '../services/orderService';
+import { getOrderByCode, reportOrder, getOrderInvoice } from '../services/orderService';  
+import { getOrderStatusLabel, getOrderStatusTextClass, getOrderStatusDotClass } from '../helpers/orderStatus';
 import { toast } from 'react-toastify';
 import { Dialog, DialogTitle, DialogContent, DialogActions, TextField, Button } from '@mui/material';
 import resolveImage from '../helpers/imageUtils';
@@ -39,6 +40,20 @@ function OrderTimeline({ currentStatus }) {
         <div className="flex items-center justify-center gap-3 text-red-600">
           <XCircle size={24} />
           <span className="font-semibold">Đơn hàng đã bị hủy</span>
+        </div>
+      </div>
+    );
+  }
+
+  if (currentStatus === 'reported') {
+    return (
+      <div className="bg-yellow-50 rounded-lg border border-yellow-200 p-6 mb-4">
+        <div className="flex items-center justify-center gap-3 text-yellow-700">
+          <Clock size={24} />
+          <div className="text-center">
+            <div className="font-semibold">Yêu cầu hủy đã được gửi</div>
+            <div className="text-sm text-yellow-800">Đơn hàng đang chờ xét duyệt bởi quản trị viên</div>
+          </div>
         </div>
       </div>
     );
@@ -92,22 +107,14 @@ function OrderTimeline({ currentStatus }) {
 }
 
 function StatusBadge({ status }) {
-  const map = {
-    pending: { text: 'text-yellow-700', label: 'Chờ xử lý' },
-    paid: { text: 'text-blue-700', label: 'Đã thanh toán' },
-    processing: { text: 'text-orange-700', label: 'Đang xử lý' },
-    shipping: { text: 'text-indigo-700', label: 'Đang giao' },
-    delivered: { text: 'text-green-700', label: 'Đã giao' },
-    completed: { text: 'text-green-700', label: 'Hoàn thành' },
-    cancelled: { text: 'text-red-700', label: 'Đã hủy' },
-    refunded: { text: 'text-purple-700', label: 'Hoàn tiền' },
-  };
-  const config = map[status] || { text: 'text-gray-700', label: status };
-  
+  const label = getOrderStatusLabel(status);
+  const textClass = getOrderStatusTextClass(status);
+  const dotClass = getOrderStatusDotClass(status);
+
   return (
-    <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${config.text}`}>
-      <div className={`w-2 h-2 rounded-full ${config.text.replace('text-', 'bg-')}`} />
-      {config.label}
+    <span className={`inline-flex items-center gap-1.5 text-sm font-medium ${textClass}`}>
+      <div className={`w-2 h-2 rounded-full ${dotClass}`} />
+      {label}
     </span>
   );
 }
@@ -141,6 +148,10 @@ export default function OrderDetail() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [downloadingInvoice, setDownloadingInvoice] = useState(false);
+  const [canceling, setCanceling] = useState(false);
+  const [reportOpen, setReportOpen] = useState(false);
+  const [reportReason, setReportReason] = useState('');
 
   useEffect(() => {
     let mounted = true;
@@ -210,6 +221,28 @@ export default function OrderDetail() {
     userId
   } = order;
 
+  async function handleDownloadInvoice() {
+    try {
+      setDownloadingInvoice(true);
+      const blob = await getOrderInvoice({ orderCode: code });
+      const filename = `HD_${code || order._id}.pdf`;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Đã tải xuống hóa đơn');
+    } catch (err) {
+      console.error('download invoice', err);
+      toast.error((err && err.message) || 'Không thể tải hóa đơn');
+    } finally {
+      setDownloadingInvoice(false);
+    }
+  }
+
   return (
     <div className="min-h-screen bg-gray-50">
       <div className="max-w-6xl mx-auto px-4 py-6">
@@ -244,6 +277,77 @@ export default function OrderDetail() {
             <div className="text-right">
               <div className="text-sm text-gray-600 mb-1">Tổng thanh toán</div>
               <div className="text-2xl font-bold text-gray-900">{totalAmount.toLocaleString('vi-VN')}đ</div>
+              <div className="mt-3 flex items-center justify-end gap-2">
+                <button
+                  onClick={handleDownloadInvoice}
+                  disabled={downloadingInvoice}
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-gray-100 hover:bg-gray-200 text-gray-700"
+                >
+                  <FileText size={16} />
+                  {downloadingInvoice ? 'Đang tải...' : 'Tải hóa đơn'}
+                </button>
+                {/* Request cancellation (send report to admin) - only pending or confirmed */}
+                {['pending', 'confirmed'].includes(String(orderStatus).toLowerCase()) && (
+                  <>
+                    <button
+                      onClick={() => setReportOpen(true)}
+                      className="inline-flex items-center gap-2 px-3 py-1.5 rounded-md text-sm font-medium bg-red-50 hover:bg-red-100 text-red-700"
+                    >
+                      <XCircle size={16} />
+                      Hủy đơn
+                    </button>
+
+                    <Dialog open={reportOpen} onClose={() => setReportOpen(false)} fullWidth maxWidth="sm">
+                      <DialogTitle>Yêu cầu hủy đơn</DialogTitle>
+                      <DialogContent>
+                        <div className="space-y-2">
+                          <div className="text-sm text-gray-700">Vui lòng nhập lý do bạn muốn hủy đơn. Yêu cầu sẽ được gửi cho quản trị viên để xét duyệt.</div>
+                          <TextField
+                            autoFocus
+                            margin="dense"
+                            label="Lý do hủy"
+                            type="text"
+                            fullWidth
+                            multiline
+                            minRows={3}
+                            value={reportReason}
+                            onChange={(e) => setReportReason(e.target.value)}
+                          />
+                        </div>
+                      </DialogContent>
+                      <DialogActions>
+                        <Button onClick={() => { setReportOpen(false); setReportReason(''); }} color="inherit">Hủy</Button>
+                        <Button
+                          onClick={async () => {
+                            const reason = String(reportReason || '').trim();
+                            if (!reason) { toast.error('Vui lòng cung cấp lý do hủy đơn'); return; }
+                            try {
+                              setCanceling(true);
+                              const token = localStorage.getItem('auth_token') || sessionStorage.getItem('auth_token');
+                              if (!token) throw new Error('Bạn cần đăng nhập để gửi yêu cầu hủy');
+                              await reportOrder(order._id || order.id, { reason }, token);
+                              toast.success('Yêu cầu hủy đã được gửi lên hệ thống');
+                              const fresh = await getOrderByCode(orderCode);
+                              setOrder(fresh);
+                              setReportOpen(false);
+                              setReportReason('');
+                            } catch (err) {
+                              console.error('request cancellation', err);
+                              toast.error((err && err.message) || 'Không thể gửi yêu cầu hủy');
+                            } finally {
+                              setCanceling(false);
+                            }
+                          }}
+                          disabled={canceling}
+                          variant="contained"
+                        >
+                          {canceling ? 'Đang gửi...' : 'Gửi yêu cầu'}
+                        </Button>
+                      </DialogActions>
+                    </Dialog>
+                  </>
+                )}
+              </div>
             </div>
           </div>
         </div>

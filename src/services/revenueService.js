@@ -55,6 +55,30 @@ export const getTopProducts = async ({ limit = 10, periodDays = 90 } = {}) => {
     }
 };
 
+export const getTopCustomers = async ({ limit = 10, periodDays = 90 } = {}) => {
+    try {
+        attachAuth();
+        const { data } = await api.get("/admin/stats/top-customers", {
+            params: { limit, periodDays },
+        });
+        return data;
+    } catch (err) {
+        handleError(err);
+    }
+};
+
+export const getSlowProducts = async ({ limit = 20, periodDays = 90 } = {}) => {
+    try {
+        attachAuth();
+        const { data } = await api.get("/admin/stats/slow-products", {
+            params: { limit, periodDays },
+        });
+        return data;
+    } catch (err) {
+        handleError(err);
+    }
+};
+
 export const getRevenueForecast = async ({ period = undefined, limit = 1 } = {}) => {
     try {
         attachAuth();
@@ -68,9 +92,23 @@ export const getRevenueForecast = async ({ period = undefined, limit = 1 } = {})
     }
 };
 
+export const exportStatsExcel = async (params = {}) => {
+    try {
+        attachAuth();
+        const res = await api.get("/admin/stats/export-excel", {
+            params,
+            responseType: 'blob',
+        });
+        return res.data; // Blob
+    } catch (err) {
+        handleError(err);
+    }
+};
+
 export default {
     getAdminOverview,
     getSalesByPeriod,
     getTopProducts,
     getRevenueForecast,
+    exportStatsExcel,
 };

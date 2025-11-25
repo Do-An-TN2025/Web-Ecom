@@ -3,28 +3,20 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Package, Truck, CheckCircle, XCircle, Clock, Search, Eye, AlertCircle, ArrowLeft, ShoppingBag, Star, X } from "lucide-react";
 import { toast } from "react-toastify";
 import orderService from "../services/orderService";
+import { getOrderStatusLabel, getOrderStatusTextClass, getOrderStatusDotClass } from '../helpers/orderStatus';
 import reviewService from "../services/reviewService";
 import resolveImage from '../helpers/imageUtils';
 
 // Component hiển thị trạng thái
 function OrderStatusBadge({ status }) {
-  const statusConfig = {
-    pending: { label: "Chờ xử lý", color: "text-yellow-700", dot: "bg-yellow-700" },
-    paid: { label: "Đã thanh toán", color: "text-blue-700", dot: "bg-blue-700" },
-    processing: { label: "Đang xử lý", color: "text-orange-700", dot: "bg-orange-700" },
-    shipping: { label: "Đang giao", color: "text-indigo-700", dot: "bg-indigo-700" },
-    delivered: { label: "Đã giao", color: "text-green-700", dot: "bg-green-700" },
-    completed: { label: "Hoàn thành", color: "text-green-700", dot: "bg-green-700" },
-    cancelled: { label: "Đã hủy", color: "text-red-700", dot: "bg-red-700" },
-    refunded: { label: "Hoàn tiền", color: "text-purple-700", dot: "bg-purple-700" }
-  };
-
-  const config = statusConfig[status] || statusConfig.pending;
+  const label = getOrderStatusLabel(status);
+  const textClass = getOrderStatusTextClass(status);
+  const dotClass = getOrderStatusDotClass(status);
 
   return (
-    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${config.color}`}>
-      <div className={`w-2 h-2 rounded-full ${config.dot}`} />
-      {config.label}
+    <span className={`inline-flex items-center gap-1.5 text-xs font-medium ${textClass}`}>
+      <div className={`w-2 h-2 rounded-full ${dotClass}`} />
+      {label}
     </span>
   );
 }

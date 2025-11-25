@@ -209,6 +209,40 @@ export async function approveOrderReport(reportId, body = {}, token) {
   return handleResponse(res);
 }
 
+// download invoice PDF (returns a Blob)
+export async function getOrderInvoice({ id = null, orderCode = null } = {}, token = null) {
+  if (!id && !orderCode) throw new Error("id or orderCode required");
+  const params = new URLSearchParams();
+  if (id) params.set("id", String(id));
+  if (orderCode) params.set("orderCode", String(orderCode));
+  const url = `${API_URL}/orders/invoice${params.toString() ? `?${params.toString()}` : ""}`;
+
+  const res = await fetch(url, {
+    method: "GET",
+    headers: {
+      ...authHeader(token),
+    },
+  });
+
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    let data = null;
+    try {
+      data = text ? JSON.parse(text) : null;
+    } catch {
+      data = text;
+    }
+    const err = new Error((data && data.message) || res.statusText || "Request failed");
+    err.status = res.status;
+    err.payload = data;
+    throw err;
+  }
+
+  const blob = await res.blob();
+  return blob;
+}
+
+
 export default {
   createOrder,
   checkPaymentStatus,
@@ -221,4 +255,5 @@ export default {
   reportOrder,
   getOrderReportsAdmin,
   approveOrderReport,
+  getOrderInvoice,
 };

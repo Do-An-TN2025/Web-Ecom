@@ -10,6 +10,7 @@ import {
   Table,
   Tooltip,
 } from "antd";
+import { getOrderStatusLabel, getOrderStatusTagColor } from '../../helpers/orderStatus';
 import {
   ArrowUpOutlined,
   ArrowDownOutlined,
@@ -19,7 +20,7 @@ import {
   WalletOutlined,
   UserOutlined,
 } from "@ant-design/icons";
-import { ResponsiveContainer, AreaChart, Area } from "recharts";
+import { ResponsiveContainer, AreaChart, Area, PieChart, Pie, Cell, Tooltip as RechartsTooltip, Legend, BarChart, Bar, XAxis, YAxis, CartesianGrid } from "recharts";
 
 const currencyFormatter = (v) =>
   typeof v === "number" ? v.toLocaleString("vi-VN") + " ₫" : v;
@@ -45,11 +46,9 @@ const PAYMENT_MAP = {
 
 const getStatusTag = (key) => {
   if (!key && key !== 0) return <Tag color="default">—</Tag>;
-  const k = String(key).toLowerCase();
-  const meta = STATUS_MAP[k];
-  if (meta) return <Tag color={meta.color}>{meta.label}</Tag>;
-  // Fallback: beautify key
-  return <Tag color="default">{String(key).replace(/[_-]/g, " ")}</Tag>;
+  const label = getOrderStatusLabel(key);
+  const color = getOrderStatusTagColor(key) || (STATUS_MAP[String(key).toLowerCase()]?.color) || 'default';
+  return <Tag color={color}>{label}</Tag>;
 };
 
 const getPaymentTag = (key) => {
@@ -58,6 +57,25 @@ const getPaymentTag = (key) => {
   const meta = PAYMENT_MAP[k] || PAYMENT_MAP[k.replace(/\s+/g, "_")];
   if (meta) return <Tag color={meta.color}>{meta.label}</Tag>;
   return <Tag color="gold">{String(key).replace(/[_-]/g, " ")}</Tag>;
+};
+
+// map simple tag color names to hex for charts
+const COLOR_HEX = {
+  gold: '#faad14',
+  blue: '#1890ff',
+  green: '#52c41a',
+  cyan: '#13c2c2',
+  default: '#d9d9d9',
+  magenta: '#eb2f96',
+  orange: '#fa8c16',
+  red: '#ff4d4f',
+  purple: '#722ed1',
+  yellow: '#fadb14'
+};
+
+const toPieData = (obj) => {
+  if (!obj || typeof obj !== 'object') return [];
+  return Object.entries(obj).map(([k, v]) => ({ name: String(k), value: Number(v) || 0 }));
 };
 
 // Mini sparkline component
@@ -260,10 +278,10 @@ const OverviewTab = ({ overview = {}, onRefresh }) => {
             <Table
               dataSource={(recentOrders || []).map((r, i) => ({
                 key: r._id || i,
-                orderId: r.code || r._id || `#${i + 1}`,
+                orderId: r.orderCode || r._id || `#${i + 1}`,
                 date: r.date || r.createdAt ? new Date(r.date || r.createdAt).toLocaleString() : "-",
                 total: r.totalAmount || r.total || 0,
-                status: r.status || "—",
+                status: r.orderStatus || "—",
               }))}
               columns={recentCols}
               pagination={{ pageSize: 6 }}

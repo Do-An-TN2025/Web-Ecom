@@ -12,8 +12,9 @@ import {
   Space,
   Typography,
   Tabs,
+  message,
 } from "antd";
-import { ArrowUpOutlined, ArrowDownOutlined, ReloadOutlined } from "@ant-design/icons";
+import { ArrowUpOutlined, ArrowDownOutlined, ReloadOutlined, DownloadOutlined } from "@ant-design/icons";
 import {
   ComposedChart,
   XAxis,
@@ -29,12 +30,17 @@ import {
   getAdminOverview,
   getSalesByPeriod,
   getTopProducts,
+  getTopCustomers,
+  getSlowProducts,
   getRevenueForecast,
+  exportStatsExcel,
 } from "../services/revenueService";
 import OverviewTab from "../components/Admin/OverviewTab";
 import SalesTab from "../components/Admin/SalesTab";
 import ForecastTab from "../components/Admin/ForecastTab";
 import TopProductsTab from "../components/Admin/TopProductsTab";
+import TopCustomersTab from "../components/Admin/TopCustomersTab";
+import SlowProductsTab from "../components/Admin/SlowProductsTab";
 
 const { Title, Text } = Typography;
 const { Option } = Select;
@@ -47,11 +53,14 @@ const AdminDashboard = () => {
   const [overview, setOverview] = useState({});
   const [sales, setSales] = useState({ labels: [], data: [] });
   const [topProducts, setTopProducts] = useState([]);
+  const [topCustomers, setTopCustomers] = useState([]);
+  const [slowProducts, setSlowProducts] = useState([]);
   const [forecast, setForecast] = useState(null);
 
   const [loading, setLoading] = useState(true);
   const [loadingSales, setLoadingSales] = useState(false);
   const [error, setError] = useState(null);
+  const [exporting, setExporting] = useState(false);
 
   // UI filters
   const [period, setPeriod] = useState("day");
@@ -61,15 +70,19 @@ const AdminDashboard = () => {
     setLoading(true);
     setError(null);
     try {
-      const [ov, salesData, top, fc] = await Promise.all([
+      const [ov, salesData, top, topCust, slow, fc] = await Promise.all([
         getAdminOverview(),
         getSalesByPeriod({ period, range }),
         getTopProducts({ limit: 8, periodDays: 90 }),
+        getTopCustomers({ limit: 10, periodDays: 90 }),
+        getSlowProducts({ limit: 20, periodDays: 90 }),
         getRevenueForecast({ period: "day", limit: 1 }),
       ]);
       setOverview(ov || {});
       setSales(salesData || { labels: [], data: [] });
       setTopProducts((top && top.data) || top || []);
+      setTopCustomers((topCust && topCust.data) || topCust || []);
+      setSlowProducts((slow && slow.data) || slow || []);
       setForecast(fc || null);
     } catch (err) {
       console.error("Admin dashboard load error", err);
@@ -94,6 +107,30 @@ const AdminDashboard = () => {
       console.error("Sales reload error", err);
     } finally {
       setLoadingSales(false);
+    }
+  };
+
+  const downloadStatsExcel = async (params = {}) => {
+    try {
+      setExporting(true);
+      const payload = { period, range, ...params };
+      const blob = await exportStatsExcel(payload);
+      if (!blob) throw new Error('No data');
+      const filename = `stats_${period || 'all'}_${new Date().toISOString().slice(0,10)}.xlsx`;
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = filename;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      message.success('Đã xuất báo cáo Excel');
+    } catch (err) {
+      console.error('export stats excel', err);
+      message.error(err?.message || 'Không thể xuất báo cáo');
+    } finally {
+      setExporting(false);
     }
   };
 
@@ -150,6 +187,9 @@ const AdminDashboard = () => {
           </Col>
           <Col>
             <Space>
+              <Button icon={<DownloadOutlined />} onClick={() => downloadStatsExcel()} loading={exporting}>
+                Xuất Excel
+              </Button>
               <Button icon={<ReloadOutlined />} onClick={() => loadAll()}>
                 Refresh
               </Button>
@@ -197,7 +237,19 @@ const AdminDashboard = () => {
 
                 <TabPane tab="Sản phẩm bán chạy" key="top-products">
                   <div style={{ padding: 20 }}>
-                    <TopProductsTab products={topProducts} columns={[]} />
+                    <TopProductsTab products={topProducts} columns={columns} />
+                  </div>
+                </TabPane>
+
+                <TabPane tab="Sản phẩm bán chậm" key="slow-products">
+                  <div style={{ padding: 20 }}>
+                    <SlowProductsTab products={slowProducts} />
+                  </div>
+                </TabPane>
+
+                <TabPane tab="Top khách hàng" key="top-customers">
+                  <div style={{ padding: 20 }}>
+                    <TopCustomersTab customers={topCustomers} />
                   </div>
                 </TabPane>
               </Tabs>

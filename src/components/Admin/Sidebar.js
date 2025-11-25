@@ -15,10 +15,7 @@ const menuItems = [
   { name: "Khuyến Mãi", icon: <Users size={20} />, path: "/admin/vouchers" },
   { name: "Báo cáo", icon: <BarChart3 size={20} />, path: "/admin/reports" },
   { name: "Đánh giá", icon: <MessageSquare size={20} />, path: "/admin/reviews" },
-  { name: "Banners", icon: <Image size={20} />, path: "/admin/banners" }, 
-  { name: "Notifications", icon: <Bell size={20} />, path: "/admin/notifications" },
-  { name: "Content", icon: <FileText size={20} />, path: "/admin/content" }, 
-  { name: "Settings", icon: <Settings size={20} />, path: "/" },
+  { name: "Trang Chủ", icon: <Settings size={20} />, path: "/" },
 ];
 
 export default function Sidebar() {
