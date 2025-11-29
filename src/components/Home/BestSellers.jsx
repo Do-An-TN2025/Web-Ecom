@@ -1,19 +1,21 @@
 import React, { useEffect, useState, useRef, useCallback } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { ShoppingCart, TrendingUp, Star } from 'lucide-react';
 import { getBestSellers } from '../../services/productService';
 import { useCart } from '../../contexts/CartContext';
 import { useCartToast } from '../../hooks/CartAddNotifier';
 import resolveImage from '../../helpers/imageUtils';
 
-function ProductCard({ product, onAdd, index }) {
+function ProductCard({ product, onAdd, onOpen, index }) {
   const [isHovered, setIsHovered] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
   const [adding, setAdding] = useState(false);
 
-  const handleAdd = async () => {
+  const handleAdd = async (e) => {
     if (adding) return;
     setAdding(true);
     try {
+      if (e && e.stopPropagation) e.stopPropagation();
       await onAdd();
     } catch (err) {
       console.error('Add failed', err);
@@ -25,6 +27,7 @@ function ProductCard({ product, onAdd, index }) {
   return (
     <div 
       className="group relative bg-white rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl"
+      onClick={() => onOpen && onOpen(product.slug || product._id)}
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
       style={{
@@ -57,21 +60,13 @@ function ProductCard({ product, onAdd, index }) {
         <div className={`absolute inset-0 bg-gradient-to-t from-black/60 via-black/20 to-transparent transition-opacity duration-300 ${
           isHovered ? 'opacity-100' : 'opacity-0'
         }`}>
-          <button
-            onClick={handleAdd}
-            disabled={adding}
-            className="absolute bottom-4 left-1/2 -translate-x-1/2 bg-yellow-500 hover:bg-yellow-600 disabled:bg-gray-400 text-white px-6 py-3 rounded-xl font-semibold flex items-center gap-2 shadow-xl transform transition-all duration-300 hover:scale-105 active:scale-95 disabled:cursor-not-allowed"
-          >
-            <ShoppingCart size={18} />
-            {adding ? 'Đang thêm...' : 'Thêm vào giỏ'}
-          </button>
         </div>
 
         {/* Rating & Sold Badge */}
         <div className="absolute top-3 right-3 bg-white/95 backdrop-blur-sm rounded-lg px-2 py-1 flex flex-col items-end gap-0.5 shadow-lg">
           <div className="flex items-center gap-1">
             <Star size={12} className="fill-yellow-400 text-yellow-400" />
-            <span className="text-xs font-bold text-gray-800">{product.rating || 4.5}</span>
+            <span className="text-xs font-bold text-gray-800">{product.rating || 5}</span>
           </div>
           <span className="text-[10px] text-gray-500">Đã bán {product.soldQuantity || 0}</span>
         </div>
@@ -92,7 +87,7 @@ function ProductCard({ product, onAdd, index }) {
           
           {/* Quick Add Icon */}
           <button
-            onClick={handleAdd}
+            onClick={(e) => handleAdd(e)}
             disabled={adding}
             className="w-10 h-10 bg-yellow-50 hover:bg-yellow-500 text-yellow-600 hover:text-white rounded-full flex items-center justify-center transition-all duration-300 group-hover:scale-110 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={`Thêm ${product.name} vào giỏ`}
@@ -118,6 +113,7 @@ export default function BestSellers({ limit = 8, days = 90, autoPlay = true }) {
   const autoplayRef = useRef(null);
   const { addItem } = useCart();
   const toast = useCartToast();
+  const navigate = useNavigate();
 
   useEffect(() => {
     let mounted = true;
@@ -272,6 +268,7 @@ export default function BestSellers({ limit = 8, days = 90, autoPlay = true }) {
                           product={product}
                           index={idx}
                           onAdd={() => handleAddToCart(product)}
+                          onOpen={(slug) => navigate(`/product/${slug}`)}
                         />
                       ))}
                     </div>
