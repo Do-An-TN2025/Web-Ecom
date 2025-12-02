@@ -4,7 +4,8 @@ import {
   LayoutDashboard, Package, ShoppingCart, Users, Settings, 
   BarChart3, Tag, MessageSquare, Bell, FileText, Image, 
   ChevronRight,
-  ChevronLeft
+  ChevronLeft,
+  UserCheck
 } from "lucide-react";
 
 const menuItems = [
@@ -15,6 +16,7 @@ const menuItems = [
   { name: "Khuyến Mãi", icon: <Users size={20} />, path: "/admin/vouchers" },
   { name: "Báo cáo", icon: <BarChart3 size={20} />, path: "/admin/reports" },
   { name: "Đánh giá", icon: <MessageSquare size={20} />, path: "/admin/reviews" },
+  { name: "Nhân Sự", icon: <UserCheck size={20} />, path: "/admin/staff" },
   { name: "Trang Chủ", icon: <Settings size={20} />, path: "/" },
 ];
 
