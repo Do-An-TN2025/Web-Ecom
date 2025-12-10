@@ -38,6 +38,7 @@ export default function ProductDetailView({ product }) {
   const [imageIndex, setImageIndex] = useState(0);
   const [isAdding, setIsAdding] = useState(false);
   const isAddingRef = useRef(false);
+  const [openReviewId, setOpenReviewId] = useState(null);
   const [activeTab, setActiveTab] = useState("description"); // description | shipping | returns
   const images = selectedColor.images || [];
 
@@ -358,6 +359,10 @@ export default function ProductDetailView({ product }) {
     }
   };
 
+  const toggleOpenReview = (id) => {
+    setOpenReviewId((prev) => (prev === id ? null : id));
+  };
+
   return (
     <div className="mx-auto max-w-7xl px-4 py-6 md:py-10">
       <div className="grid gap-8 lg:grid-cols-2 lg:gap-14">
@@ -607,6 +612,75 @@ export default function ProductDetailView({ product }) {
                     ({product.rating.count} đánh giá)
                   </span>
                 )}
+              </div>
+            </div>
+          )}
+
+          {/* Recent Reviews Preview & Detail */}
+          {product.recentReviews && product.recentReviews.length > 0 && (
+            <div className="mt-6">
+              <h3 className="text-sm font-semibold text-zinc-900">Đánh giá từ khách hàng</h3>
+              <div className="mt-3 space-y-3">
+                {product.recentReviews.map((r) => (
+                  <div key={r._id} className="rounded-lg border border-zinc-100 bg-white p-3">
+                    <div className="flex items-start justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="text-sm font-medium text-zinc-900">
+                          {r.user?.firstName || r.user?.name || "Khách hàng"}
+                        </div>
+                        <div className="flex items-center gap-1">
+                          {[...Array(5)].map((_, i) => (
+                            <Star
+                              key={i}
+                              className={`h-4 w-4 ${
+                                i < (r.rating || 0)
+                                  ? "fill-yellow-400 text-yellow-400"
+                                  : "fill-zinc-200 text-zinc-200"
+                              }`}
+                            />
+                          ))}
+                        </div>
+                      </div>
+                      <button
+                        onClick={() => toggleOpenReview(r._id)}
+                        className="text-sm font-medium text-yellow-600"
+                        aria-expanded={openReviewId === r._id}
+                      >
+                        {openReviewId === r._id ? "Thu gọn" : "Xem chi tiết"}
+                      </button>
+                    </div>
+
+                    <div className="mt-2 text-sm text-zinc-700">
+                      {r.comment}
+                    </div>
+
+                    <AnimatePresence>
+                      {openReviewId === r._id && (
+                        <motion.div
+                          initial={{ opacity: 0, height: 0 }}
+                          animate={{ opacity: 1, height: "auto" }}
+                          exit={{ opacity: 0, height: 0 }}
+                          transition={{ duration: 0.18 }}
+                          className="mt-3 overflow-hidden"
+                        >
+                          <div className="rounded-md bg-zinc-50 p-3 text-sm text-zinc-700">
+                            <div>
+                              <div className="mb-2 font-medium text-zinc-900">Nội dung đánh giá</div>
+                              <div>{r.comment}</div>
+                            </div>
+
+                            {r.adminReply && (
+                              <div className="mt-3 rounded border-l-4 border-yellow-400 bg-white p-3">
+                                <div className="text-xs text-zinc-500">Phản hồi từ admin</div>
+                                <div className="mt-1 text-sm text-zinc-800">{r.adminReply.message}</div>
+                              </div>
+                            )}
+                          </div>
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ))}
               </div>
             </div>
           )}

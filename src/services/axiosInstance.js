@@ -1,7 +1,7 @@
 import axios from "axios";
 
 const axiosInstance = axios.create({
-  baseURL: "https://sever-ecommerce.onrender.com/api",
+  baseURL: process.env.REACT_APP_API_URL || "http://localhost:8686/api",
   headers: {
     "Content-Type": "application/json",
   },
