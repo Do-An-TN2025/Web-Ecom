@@ -40,6 +40,22 @@ const ReviewCard = ({ item }) => {
           <div className="text-sm text-gray-700 break-words">{comment}</div>
         </div>
 
+        {item.adminReply && item.adminReply.message && (
+          <div className="mt-3 p-3 bg-gray-50 rounded-md border-l-4 border-blue-100">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="w-8 h-8 flex items-center justify-center bg-blue-100 rounded-full overflow-hidden text-sm font-medium text-blue-700">
+                  {item.adminReply?.adminId ? ((item.adminReply.adminId.firstName || '').charAt(0) || 'A') : 'A'}
+                </div>
+                <div className="text-sm font-semibold text-gray-800">{item.adminReply?.adminId ? `${item.adminReply.adminId.firstName || ''} ${item.adminReply.adminId.lastName || ''}`.trim() : 'Quản trị viên'}</div>
+              </div>
+              <div className="text-xs text-gray-500">{item.adminReply?.repliedAt ? new Date(item.adminReply.repliedAt).toLocaleDateString() : ''}</div>
+            </div>
+
+            <div className="mt-2 text-sm text-gray-700 whitespace-pre-wrap">{item.adminReply.message}</div>
+          </div>
+        )}
+
         <div className="mt-3 text-xs text-gray-500">
           {productSlug ? (
             <Link to={`/product/${productSlug}`} className="text-blue-600 hover:underline">{productName}</Link>

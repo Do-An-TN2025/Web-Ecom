@@ -189,6 +189,21 @@ const reviewService = {
       throw error.response?.data || error;
     }
   },
+
+  /**
+   * Admin: reply to a review
+   * @param {string} reviewId
+   * @param {string} message
+   */
+  replyToReview: async (reviewId, message) => {
+    try {
+      const response = await axiosInstance.put(`/products/reviews/${reviewId}/reply`, { message });
+      return response.data;
+    } catch (error) {
+      console.error('Reply to review error:', error);
+      throw error.response?.data || error;
+    }
+  },
 };
 
 export default reviewService;

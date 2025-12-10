@@ -43,6 +43,8 @@ const Review = () => {
   const [total, setTotal] = useState(0);
   const [query, setQuery] = useState('');
   const [selected, setSelected] = useState(null);
+  const [replyText, setReplyText] = useState('');
+  const [replyLoading, setReplyLoading] = useState(false);
 
   const fetch = useCallback(async (p = page, ps = pageSize, q = query) => {
     try {
@@ -64,6 +66,7 @@ const Review = () => {
       setItems(mapped);
       setTotal(Number(totalCount) || mapped.length);
       if (!selected && mapped.length) setSelected(mapped[0]);
+      return mapped;
     } catch (err) {
       console.error('[Admin.Review] fetch failed', err);
       setItems([]);
@@ -76,6 +79,10 @@ const Review = () => {
   useEffect(() => {
     fetch(page, pageSize, query);
   }, [fetch, page, pageSize, query]);
+
+  useEffect(() => {
+    setReplyText(selected?.raw?.adminReply?.message || '');
+  }, [selected]);
 
   const onSearch = () => { setPage(1); fetch(1, pageSize, query); };
 
@@ -202,6 +209,59 @@ const Review = () => {
                   </Box>
                 ) : (
                   <Typography variant="body2" color="text.secondary">Không có thông tin sản phẩm</Typography>
+                )}
+
+                <Divider sx={{ my: 2 }} />
+
+                <Typography variant="subtitle2">Phản hồi của quản trị viên</Typography>
+                {selected.raw?.adminReply && selected.raw.adminReply.message ? (
+                  <Box sx={{ mt: 1, p: 1, bgcolor: '#f8fafc', borderRadius: 1 }}>
+                    <Stack direction="row" spacing={2} alignItems="flex-start">
+                      <Avatar sx={{ width: 48, height: 48, bgcolor: '#e6eef8' }}>{selected.raw.adminReply?.adminId ? initials(`${selected.raw.adminReply.adminId.firstName || ''} ${selected.raw.adminReply.adminId.lastName || ''}`) : 'AD'}</Avatar>
+                      <Box sx={{ flex: 1 }}>
+                        <Typography variant="body2" fontWeight={600}>{selected.raw.adminReply?.adminId ? `${selected.raw.adminReply.adminId.firstName || ''} ${selected.raw.adminReply.adminId.lastName || ''}`.trim() : 'Quản trị viên'}</Typography>
+                        <Typography variant="caption" color="text.secondary">{selected.raw.adminReply?.repliedAt ? formatDate(selected.raw.adminReply.repliedAt) : ''}</Typography>
+                        <Typography variant="body2" sx={{ mt: 1, whiteSpace: 'pre-wrap' }}>{selected.raw.adminReply.message}</Typography>
+                      </Box>
+                    </Stack>
+                  </Box>
+                ) : (
+                  <Box sx={{ mt: 1 }}>
+                    <TextField
+                      label="Viết phản hồi"
+                      placeholder="Viết phản hồi cho khách hàng..."
+                      fullWidth
+                      multiline
+                      minRows={3}
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                    />
+                    <Box sx={{ display: 'flex', justifyContent: 'flex-end', mt: 1 }}>
+                      <Button
+                        variant="contained"
+                        disabled={!replyText || replyLoading}
+                        onClick={async () => {
+                          if (!selected) return;
+                          try {
+                            setReplyLoading(true);
+                            await reviewService.replyToReview(selected.id, replyText);
+                            // re-fetch current page and restore selection
+                            const refreshedList = await fetch(page, pageSize, query);
+                            const refreshed = (refreshedList || []).find(it => it.id === selected.id);
+                            if (refreshed) setSelected(refreshed);
+                          } catch (err) {
+                            console.error('Reply failed', err);
+                            // optionally show toast
+                          } finally {
+                            setReplyLoading(false);
+                          }
+                        }}
+                        startIcon={replyLoading ? <CircularProgress size={16} /> : null}
+                      >
+                        Gửi phản hồi
+                      </Button>
+                    </Box>
+                  </Box>
                 )}
               </Box>
             ) : (
